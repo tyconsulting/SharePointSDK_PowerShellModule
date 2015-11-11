@@ -1,0 +1,30 @@
+{
+    "ConnectionFields":  [
+                             {
+                                 "IsEncrypted":  false,
+                                 "IsOptional":  false,
+                                 "Name":  "SharePointSiteURL",
+                                 "TypeName":  "System.String"
+                             },
+                              {
+                                 "IsEncrypted":  false,
+                                 "IsOptional":  false,
+                                 "Name":  "IsSharePointOnlineSite",
+                                 "TypeName":  "System.Boolean"
+                             },
+                             {
+                                 "IsEncrypted":  false,
+                                 "IsOptional":  false,
+                                 "Name":  "Username",
+                                 "TypeName":  "System.String"
+                             },
+                             {
+                                 "IsEncrypted":  true,
+                                 "IsOptional":  false,
+                                 "Name":  "Password",
+                                 "TypeName":  "System.String"
+                             }
+                         ],
+    "ConnectionTypeName":  "SharePointSDK",
+    "IntegrationModuleName":  "SharePointSDK"
+}
