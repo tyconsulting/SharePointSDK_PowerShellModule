@@ -1,22 +1,13 @@
+# .EXTERNALHELP SharePointSDK.psm1-Help.xml
 Function Import-SPClientSDK
 {
-[OutputType('System.Boolean')]
-<# 
- .Synopsis
-  Load SharePoint Client SDK DLLs
-
- .Description
-   Load SharePoint Client SDK DLLs from either the Global Assembly Cache or from the DLLs located in SharePointSDK PS module directory. It will use GAC if the DLLs are already loaded in GAC.
-
- .Example
-  # Load the OpsMgr SDK DLLs
-  Import-SPClientSDK
-#>
-    #OpsMgr 2012 R2 SDK DLLs
+    [OutputType('System.Boolean')]
+    #SharePoint Client DLLs
     $DLLPath = (Get-Module SharePointSDK).ModuleBase
     $arrDLLs = @()
     $arrDLLs += 'Microsoft.SharePoint.Client.dll'
     $arrDLLs += 'Microsoft.SharePoint.Client.Runtime.dll'
+    $arrDLLs += 'Microsoft.SharePoint.Client.WorkflowServices.dll'
 	$AssemblyVersion = "15.0.0.0"
 	$AssemblyPublicKey = "71e9bce111e9429c"
     #Load SharePoint Client SDKs
@@ -25,9 +16,10 @@ Function Import-SPClientSDK
     Foreach ($DLL in $arrDLLs)
     {
         $AssemblyName = $DLL.TrimEnd('.dll')
+        
         If (!([AppDomain]::CurrentDomain.GetAssemblies() |Where-Object { $_.FullName -eq "$AssemblyName, Version=$AssemblyVersion, Culture=neutral, PublicKeyToken=$AssemblyPublicKey"}))
 		{
-			Write-verbose 'Loading Assembly $AssemblyName...'
+            Write-verbose "Loading Assembly $AssemblyName..."
 			Try {
                 $DLLFilePath = Join-Path $DLLPath $DLL
                 [Void][System.Reflection.Assembly]::LoadFrom($DLLFilePath)
@@ -40,55 +32,18 @@ Function Import-SPClientSDK
     $bSDKLoaded
 }
 
+# .EXTERNALHELP SharePointSDK.psm1-Help.xml
 Function New-SPCredential
 {
-[OutputType('Microsoft.SharePoint.Client.SharePointOnlineCredentials')]
-[OutputType('System.Net.NetworkCredential')]
-<# 
- .Synopsis
-  Create a SharePoint credential that can be used authenticating to a SharePoint (online or On-Premise) site.
-
- .Description
-  Create a Network Credential object(System.Net.NetworkCredential) or SharePoint Online credential object(Microsoft.SharePoint.Client.SharePointOnlineCredentials) that can be used authenticating to a SharePoint site. This function will return a Microsoft.SharePoint.Client.SharePointOnlineCredentials object if its going to be used on a SharePoint Online site, or a System.Net.NetworkCredential object if it is to be used on a On-Premise SharePoint site.
-  
- .Parameter -SPConnection
-  SharePoint SDK Connection object (SMA / Azure Automation connection or hash table).
-
- .Parameter -Credential
-  The PSCredential object that contains the user name and password required to connect to the SharePoint site.
-
- .Parameter -IsSharePointOnlineSite
-  Specify if the site is a SharePoint Online site
-
- .Example
-  # Create a Credential object using a SMA connection object named "MySPOSite":
-  $SPCred = New-SPCredential -SPConnection "MySPOSite"
-
- .Example
-  # Create a Credential for a SharePoint Online site by specifying the user name and password:
-  $Username = "you@yourcompany.com"
-  $SecurePassword = ConvertTo-SecureString "password1234" -AsPlainText -Force
-  $MyPSCreds = New-Object System.Management.Automation.PSCredential ($Username, $SecurePassword)
-  $SPCred = New-SPCredential -Credential $MyPSCred -IsSharePointOnlineSite $true
-
- .Example
-  # Create a Credential for a On-Premise SharePoint site by specifying the user credential:
-  $Username = "YourDomain\YourUserName"
-  $SecurePassword = ConvertTo-SecureString "password1234" -AsPlainText -Force
-  $MyPSCred = New-Object System.Management.Automation.PSCredential ($Username, $SecurePassword)
-  $SPCred = New-SPCredential -Credential $MyPSCred -IsSPO $false
-
-  .Example
-  # Create a Credential for a On-Premise SharePoint site by specifying the user credential and prompt user to enter the password:
-  $Username = "YourDomain\YourUserName"
-  $SecurePassword = Read-Host -Prompt 'Input password here' -AsSecureString
-  $MyPSCred = New-Object System.Management.Automation.PSCredential ($Username", $SecurePassword)
-  $SPCred = New-SPCredential -Credential $MyPSCred -IsSPO $false
-#>
+    [OutputType('Microsoft.SharePoint.Client.SharePointOnlineCredentials')]
+    [OutputType('System.Net.NetworkCredential')]
     [CmdletBinding()]
     PARAM (
-        [Parameter(ParameterSetName='SMAConnection',Mandatory=$true,HelpMessage='Please specify the SMA Connection object')][Alias('Connection','c')][Object]$SPConnection,
-        [Parameter(ParameterSetName='IndividualParameter',Mandatory=$true,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')][Alias('cred')][PSCredential]$Credential,
+        [Parameter(ParameterSetName='SMAConnection',Mandatory=$true,HelpMessage='Please specify the SMA / Azure Autoamtion Connection object')][Alias('Connection','c')][Object]$SPConnection,
+        [Parameter(ParameterSetName='IndividualParameter',Mandatory=$true,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')][Alias('cred')]
+        [System.Management.Automation.PSCredential]
+        [System.Management.Automation.CredentialAttribute()]
+        $Credential,
 		[Parameter(ParameterSetName='IndividualParameter',Mandatory=$true,HelpMessage='Please specify if the site is a SharePoint Online site')][Alias('IsSPO')][boolean]$IsSharePointOnlineSite
     )
 
@@ -122,48 +77,18 @@ Function New-SPCredential
 	$SPcredential
 }
 
+# .EXTERNALHELP SharePointSDK.psm1-Help.xml
 Function Get-SPServerVersion
 {
-[OutputType('System.Version')]
-<# 
- .Synopsis
-  Get SharePoint server version.
-
- .Description
-  Get SharePoint server version using SharePoint CSOM (Client-Side Object Model)
-  
- .Parameter -SPConnection
-  SharePoint SDK Connection object (SMA connection or hash table).
-
- .Parameter -SiteUrl
-  SharePoint Site Url
-
- .Parameter -Credential
-  The PSCredential object that contains the user name and password required to connect to the SharePoint site.
-
- .Parameter -IsSharePointOnlineSite
-  Specify if the site is a SharePoint Online site
-
- .Example
-  $ServerVersion = Get-ServerVersion -SPConnection $SPConnection
-
- .Example
-  $Username = "YourDomain\YourUserName"
-  $SecurePassword = ConvertTo-SecureString "password1234" -AsPlainText -Force
-  $MyPSCred = New-Object System.Management.Automation.PSCredential ($Username, $SecurePassword)
-  $ServerVersion = Get-SPServerVersion -SiteUrl "https://yourcompany.sharepoint.com" -Credential $MyPSCred -IsSharePointOnlineSite $true
-
-.Example
-  $Username = "you@yourcompany.com"
-  $SecurePassword = ConvertTo-SecureString "password1234" -AsPlainText -Force
-  $MyPSCred = New-Object System.Management.Automation.PSCredential ($Username, $SecurePassword)
-  $ServerVersion = Get-SPServerVersion -SiteUrl "http://Shrepoint.YourCompany.com" -Credential $MyPSCred -IsSharePointOnlineSite $false
-#>
+    [OutputType('System.Version')]
     [CmdletBinding()]
 	Param(
-    [Parameter(ParameterSetName='SMAConnection',Mandatory=$True,HelpMessage='Please specify the SMA connection object')][Object]$SPConnection,
+    [Parameter(ParameterSetName='SMAConnection',Mandatory=$True,HelpMessage='Please specify the SMA / Azure Autoamtion connection object')][Object]$SPConnection,
 	[Parameter(ParameterSetName='IndividualParameter',Mandatory=$True,HelpMessage='Please specify the request URL')][String]$SiteUrl,
-	[Parameter(ParameterSetName='IndividualParameter',Mandatory=$true,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')][Alias('cred')][PSCredential]$Credential,
+	[Parameter(ParameterSetName='IndividualParameter',Mandatory=$true,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')][Alias('cred')]
+    [System.Management.Automation.PSCredential]
+    [System.Management.Automation.CredentialAttribute()]
+    $Credential,
 	[Parameter(ParameterSetName='IndividualParameter',Mandatory=$True,HelpMessage='Please specify if the site is a SharePoint Online site')][Alias('IsSPO')][boolean]$IsSharePointOnlineSite
     )
 
@@ -187,52 +112,20 @@ Function Get-SPServerVersion
 	$ServerVersion
 }
 
+# .EXTERNALHELP SharePointSDK.psm1-Help.xml
 Function Get-SPListFields
 {
-[OutputType('System.Array')]
-<# 
- .Synopsis
-  Get all fields from a list on a SharePoint site.
-
- .Description
-  Get all fields from a list on a SharePoint site.
-  
- .Parameter -SPConnection
-  SharePoint SDK Connection object (SMA connection or hash table).
-
- .Parameter -SiteUrl
-  SharePoint Site Url
-
- .Parameter -Credential
-  The PSCredential object that contains the user name and password required to connect to the SharePoint site.
-
- .Parameter -IsSharePointOnlineSite
-  Specify if the site is a SharePoint Online site
-
- .Parameter -List Name
-  Name of the list
-
- .Example
-  $ListFields = Get-SPListFields -SPConnection $SPConnection -ListName "Test List"
-
- .Example
-  $Username = "YourDomain\YourUserName"
-  $SecurePassword = ConvertTo-SecureString "password1234" -AsPlainText -Force
-  $MyPSCred = New-Object System.Management.Automation.PSCredential ($Username, $SecurePassword)
-  $ListFields = Get-SPListFields -SiteUrl "https://yourcompany.sharepoint.com" -Credential $MyPSCred -ListName "Test List" -IsSharePointOnlineSite $true
-
-.Example
-  $Username = "you@yourcompany.com"
-  $SecurePassword = ConvertTo-SecureString "password1234" -AsPlainText -Force
-  $MyPSCred = New-Object System.Management.Automation.PSCredential ($Username, $SecurePassword)
-  $ListFields = Get-SPListFields -SiteUrl "http://Shrepoint.YourCompany.com" -Credential $MyPSCred -ListName "Test List" -IsSharePointOnlineSite $false
-#>
+    [OutputType('System.Array')]
+    [OutputType('System.Array')]
     [CmdletBinding()]
 	Param(
-    [Parameter(ParameterSetName='SMAConnection',Mandatory=$True,HelpMessage='Please specify the SMA connection object')][Object]$SPConnection,
+    [Parameter(ParameterSetName='SMAConnection',Mandatory=$True,HelpMessage='Please specify the SMA / Azure Autoamtion connection object')][Object]$SPConnection,
 	[Parameter(ParameterSetName='IndividualParameter',Mandatory=$True,HelpMessage='Please specify the request URL')][String]$SiteUrl,
-	[Parameter(Mandatory=$true,HelpMessage='Please specify the name of the list')][String]$ListName,
-	[Parameter(ParameterSetName='IndividualParameter',Mandatory=$true,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')][Alias('cred')][PSCredential]$Credential,
+	[Parameter(Mandatory=$true,HelpMessage='Please specify the name of the list')][Alias('ListTitle')][String]$ListName,
+	[Parameter(ParameterSetName='IndividualParameter',Mandatory=$true,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')][Alias('cred')]
+    [System.Management.Automation.PSCredential]
+    [System.Management.Automation.CredentialAttribute()]
+    $Credential,
 	[Parameter(ParameterSetName='IndividualParameter',Mandatory=$True,HelpMessage='Please specify if the site is a SharePoint Online site')][Alias('IsSPO')][boolean]$IsSharePointOnlineSite
     )
 
@@ -269,57 +162,19 @@ Function Get-SPListFields
 	,$ListFields
 }
 
+# .EXTERNALHELP SharePointSDK.psm1-Help.xml
 Function Add-SPListItem
 {
-[OutputType('System.Int32')]
-<# 
- .Synopsis
-  Add a list item to the SharePoint site.
-
- .Description
-  Add a list item to the SharePoint site. When the item has been successfully added, the List Item ID is returned. a NULL value is returned if the item is not added to the list.
-  
- .Parameter -SPConnection
-  SharePointSDK Connection object (SMA connection or hash table).
-
- .Parameter -SiteUrl
-  SharePoint Site Url
-
- .Parameter -Credential
-  The PSCredential object that contains the user name and password required to connect to the SharePoint site.
-
- .Parameter -IsSharePointOnlineSite
-  Specify if the site is a SharePoint Online site
-
- .Parameter -ListName
-  Name of the list
-
- .Parameter -ListFieldsValues
-  A hash table containing List item that to be added.
-
- .Example
-  $HashTableListFieldsValues= @{ "Title", "List Item Title"
-	"Description", "List Item Description Text"
-  }
-  $AddListItem = Add-SPListItem -SPConnection $SPConnection -ListName "Test List" -ListFieldsValues $HashTableListFieldsValues
-
- .Example
-   $HashTableListFieldsValues= @{
-    "Title" = "List Item Title"
-	"Description" = "List Item Description Text"
-  }
-  $Username = "you@yourcompany.com"
-  $SecurePassword = ConvertTo-SecureString "password1234" -AsPlainText -Force
-  $MyPSCred = New-Object System.Management.Automation.PSCredential ($Username, $SecurePassword)
-  $AddListItem = Add-SPListItem -SiteUrl "https://yourcompany.sharepoint.com" -Credential $MyPSCred -IsSharePointOnlineSite $true -ListName "Test List" -ListFieldsValues $HashTableListFieldsValues
-
-#>
+    [OutputType('System.Int32')]
     [CmdletBinding()]
 	Param(
-    [Parameter(ParameterSetName='SMAConnection',Mandatory=$True,HelpMessage='Please specify the SMA connection object')][Object]$SPConnection,
+    [Parameter(ParameterSetName='SMAConnection',Mandatory=$True,HelpMessage='Please specify the SMA / Azure Autoamtion connection object')][Object]$SPConnection,
 	[Parameter(ParameterSetName='IndividualParameter',Mandatory=$True,HelpMessage='Please specify the request URL')][String]$SiteUrl,
 	[Parameter(Mandatory=$true,HelpMessage='Please specify the name of the list')][String]$ListName,
-	[Parameter(ParameterSetName='IndividualParameter',Mandatory=$true,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')][Alias('cred')][PSCredential]$Credential,
+	[Parameter(ParameterSetName='IndividualParameter',Mandatory=$true,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')][Alias('cred')]
+    [System.Management.Automation.PSCredential]
+    [System.Management.Automation.CredentialAttribute()]
+    $Credential,
 	[Parameter(ParameterSetName='IndividualParameter',Mandatory=$True,HelpMessage='Please specify if the site is a SharePoint Online site')][Alias('IsSPO')][boolean]$IsSharePointOnlineSite,
 	[Parameter(Mandatory=$true,HelpMessage='Please specify the value of each list field in a hash table')][Object]$ListFieldsValues
     )
@@ -370,57 +225,21 @@ Function Add-SPListItem
 	$ListItemId
 }
 
+# .EXTERNALHELP SharePointSDK.psm1-Help.xml
 Function Get-SPListItem
 {
-[OutputType('System.Array')]
-[OutputType('System.Collections.Hashtable')]
-<# 
- .Synopsis
-  Get all items from a list on a SharePoint site or a specific item by specifying the List Item ID.
-
- .Description
-  Get all items from a list on a SharePoint site or a specific item by specifying the List Item ID. A Hash Table is used to store the property and value of each list item returned.
-  
- .Parameter -SPConnection
-  SharePointSDK Connection object (SMA connection or hash table).
-
- .Parameter -SiteUrl
-  SharePoint Site Url
-
- .Parameter -Credential
-  The PSCredential object that contains the user name and password required to connect to the SharePoint site.
-
- .Parameter -IsSharePointOnlineSite
-  Specify if the site is a SharePoint Online site
-
- .Parameter -ListName
-  Name of the list
-
- .Example
-  $ListItems = Get-SPListItem -SPConnection $SPConnection -ListName "Test List"
-
- .Example
-  $ListItem = Get-SPListItem -SPConnection $SPConnection -ListName "Test List" -ListItemID 1
-
- .Example
-  $Username = "you@yourcompany.com"
-  $SecurePassword = ConvertTo-SecureString "password1234" -AsPlainText -Force
-  $MyPSCred = New-Object System.Management.Automation.PSCredential ($Username, $SecurePassword)
-  $ListItems = Get-SPListItem -SiteUrl "https://yourcompany.sharepoint.com" -Credential $MyPSCred -IsSPO $true -ListName "Test List"
-
- .Example
-  $Username = "you@yourcompany.com"
-  $SecurePassword = ConvertTo-SecureString "password1234" -AsPlainText -Force
-  $MyPSCred = New-Object System.Management.Automation.PSCredential ($Username, $SecurePassword)
-  $ListItem = Get-SPListItem -SiteUrl "https://yourcompany.sharepoint.com" -Credential $MyPSCred -IsSPO $true -ListName "Test List" -ListItemID 1
-#>
+    [OutputType('System.Array')]
+    [OutputType('System.Collections.Hashtable')]
     [CmdletBinding()]
 	Param(
-    [Parameter(ParameterSetName='SMAConnection',Mandatory=$True,HelpMessage='Please specify the SMA Connection object')][Object]$SPConnection,
+    [Parameter(ParameterSetName='SMAConnection',Mandatory=$True,HelpMessage='Please specify the SMA / Azure Autoamtion Connection object')][Object]$SPConnection,
 	[Parameter(ParameterSetName='IndividualParameter',Mandatory=$True,HelpMessage='Please specify the request URL')][String]$SiteUrl,
 	[Parameter(Mandatory=$true,HelpMessage='Please specify the name of the list')][String]$ListName,
 	[Parameter(Mandatory=$false,HelpMessage='Please specify the list item ID if retrieving an individual list item')][int]$ListItemId=$null,
-	[Parameter(ParameterSetName='IndividualParameter',Mandatory=$true,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')][Alias('cred')][PSCredential]$Credential,
+	[Parameter(ParameterSetName='IndividualParameter',Mandatory=$true,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')][Alias('cred')]
+    [System.Management.Automation.PSCredential]
+    [System.Management.Automation.CredentialAttribute()]
+    $Credential,
 	[Parameter(ParameterSetName='IndividualParameter',Mandatory=$True,HelpMessage='Please specify if the site is a SharePoint Online site')][Alias('IsSPO')][boolean]$IsSharePointOnlineSite
     )
 
@@ -442,6 +261,14 @@ Function Get-SPListItem
 	$List = $Context.Web.Lists.GetByTitle($ListName)
 	$Context.Load($List)
 	$Context.ExecuteQuery()
+
+    #Work out if $ListItemId actually contains value
+    If ($PSBoundParameters.ContainsKey("ListItemId"))
+    {
+        $ListItemId = $PSBoundParameters.ListItemId
+    } else {
+        Remove-Variable ListItemId
+    }
 
 	If ($ListItemId -ne $null)
 	{
@@ -492,49 +319,19 @@ Function Get-SPListItem
 	}
 }
 
+# .EXTERNALHELP SharePointSDK.psm1-Help.xml
 Function Remove-SPListItem
 {
-[OutputType('System.Boolean')]
-<# 
- .Synopsis
-  Delete a list item to the SharePoint site.
-
- .Description
-  Delete a list item to the SharePoint site.
-  
- .Parameter -SPConnection
-  SharePointSDK Connection object (SMA connection or hash table).
-
- .Parameter -SiteUrl
-  SharePoint Site Url
-
- .Parameter -Credential
-  The PSCredential object that contains the user name and password required to connect to the SharePoint site.
-
- .Parameter -IsSharePointOnlineSite
-  Specify if the site is a SharePoint Online site
-
- .Parameter -ListName
-  Name of the list
-
- .Parameter -ListItemID
-  The ID of the item to be deleted
-
- .Example
-  $DeleteListItem = Remove-SPListItem -SPConnection $SPConnection -ListName "Test List" -ListItemID 1
-
- .Example
-  $Username = "you@yourcompany.com"
-  $SecurePassword = ConvertTo-SecureString "password1234" -AsPlainText -Force
-  $MyPSCred = New-Object System.Management.Automation.PSCredential ($Username, $SecurePassword)
-  $DeleteListItem = Remove-SPListItem -SiteUrl "https://yourcompany.sharepoint.com" -Credential $MyPSCred -IsSPO $true -ListName "Test List" -ListItemID 1
-#>
+    [OutputType('System.Boolean')]
     [CmdletBinding()]
 	Param(
-    [Parameter(ParameterSetName='SMAConnection',Mandatory=$True,HelpMessage='Please specify the SMA Connection object')][Object]$SPConnection,
+    [Parameter(ParameterSetName='SMAConnection',Mandatory=$True,HelpMessage='Please specify the SMA / Azure Autoamtion Connection object')][Object]$SPConnection,
 	[Parameter(ParameterSetName='IndividualParameter',Mandatory=$True,HelpMessage='Please specify the request URL')][String]$SiteUrl,
 	[Parameter(Mandatory=$true,HelpMessage='Please specify the name of the list')][String]$ListName,
-	[Parameter(ParameterSetName='IndividualParameter',Mandatory=$true,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')][Alias('cred')][PSCredential]$Credential,
+	[Parameter(ParameterSetName='IndividualParameter',Mandatory=$true,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')][Alias('cred')]
+    [System.Management.Automation.PSCredential]
+    [System.Management.Automation.CredentialAttribute()]
+    $Credential,
 	[Parameter(ParameterSetName='IndividualParameter',Mandatory=$True,HelpMessage='Please specify if the site is a SharePoint Online site')][Alias('IsSPO')][boolean]$IsSharePointOnlineSite,
 	[Parameter(Mandatory=$true,HelpMessage='Please specify the ID of the list item to be deleted')][int]$ListItemID
     )
@@ -587,61 +384,19 @@ Function Remove-SPListItem
 	$bRemoved
 }
 
+# .EXTERNALHELP SharePointSDK.psm1-Help.xml
 Function Update-SPListItem
 {
-[OutputType('System.Boolean')]
-<# 
- .Synopsis
-  Update a list item to the SharePoint site.
-
- .Description
-  UPdate a list item to the SharePoint site.
-  
- .Parameter -SPConnection
-  SharePointSDK Connection object (SMA connection or hash table).
-
- .Parameter -SiteUrl
-  SharePoint Site Url
-
- .Parameter -Credential
-  The PSCredential object that contains the user name and password required to connect to the SharePoint site.
-
- .Parameter -IsSharePointOnlineSite
-  Specify if the site is a SharePoint Online site
-
- .Parameter -ListName
-  Name of the list
-
- .Parameter -ListItemID
-  The ID of the item to be deleted
-
- .Parameter -ListFieldsValues
-  A hash table containing List item that to be added.
-
- .Example
-  $HashTableListFieldsValues= @{
-    "Title" = "List Item Title"
-	"Description" = "List Item Description Text"
-  }
-  $UpdateListItem = Update-SPListItem -SPConnection $SPConnection -ListName "Test List" -ListItemID 1 -ListFieldsValues $HashTableListFieldsValues
-
- .Example
-  $HashTableListFieldsValues= @{
-    "Title" = "List Item Title"
-	"Description" = "List Item Description Text"
-  }
-  $Username = "you@yourcompany.com"
-  $SecurePassword = ConvertTo-SecureString "password1234" -AsPlainText -Force
-  $MyPSCred = New-Object System.Management.Automation.PSCredential ($Username, $SecurePassword)
-  $UpdateListItem = Update-SPListItem -SiteUrl "https://yourcompany.sharepoint.com" -Credential $MyPSCred -IsSharePointOnlineSite $true -ListName "Test List" -ListItemID 1 -ListFieldsValues $HashTableListFieldsValues
-
-#>
+    [OutputType('System.Boolean')]
     [CmdletBinding()]
 	Param(
-    [Parameter(ParameterSetName='SMAConnection',Mandatory=$True,HelpMessage='Please specify the SMA Connection object')][Object]$SPConnection,
+    [Parameter(ParameterSetName='SMAConnection',Mandatory=$True,HelpMessage='Please specify the SMA / Azure Autoamtion Connection object')][Object]$SPConnection,
 	[Parameter(ParameterSetName='IndividualParameter',Mandatory=$True,HelpMessage='Please specify the request URL')][String]$SiteUrl,
 	[Parameter(Mandatory=$true,HelpMessage='Please specify the name of the list')][String]$ListName,
-	[Parameter(ParameterSetName='IndividualParameter',Mandatory=$true,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')][Alias('cred')][PSCredential]$Credential,
+	[Parameter(ParameterSetName='IndividualParameter',Mandatory=$true,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')][Alias('cred')]
+    [System.Management.Automation.PSCredential]
+    [System.Management.Automation.CredentialAttribute()]
+    $Credential,
 	[Parameter(ParameterSetName='IndividualParameter',Mandatory=$True,HelpMessage='Please specify if the site is a SharePoint Online site')][Alias('IsSPO')][boolean]$IsSharePointOnlineSite,
 	[Parameter(Mandatory=$true,HelpMessage='Please specify the ID of the list item to be updated')][int]$ListItemID,
 	[Parameter(Mandatory=$true,HelpMessage='Please specify the value of each list field in a hash table')][Object]$ListFieldsValues
@@ -699,52 +454,19 @@ Function Update-SPListItem
 	$bUpdated
 }
 
+# .EXTERNALHELP SharePointSDK.psm1-Help.xml
 Function Get-SPListItemAttachments
 {
-[OutputType('System.Int32')]
-<# 
- .Synopsis
-  Download all attachments from a SharePoint list item.
-
- .Description
-  Download all attachments from a SharePoint list item.  Please note this function DOES NOT work on SharePoint 2010 sites.
-  
- .Parameter -SPConnection
-  SharePointSDK Connection object (SMA connection or hash table).
-
- .Parameter -SiteUrl
-  SharePoint Site Url
-
- .Parameter -Credential
-  The PSCredential object that contains the user name and password required to connect to the SharePoint site.
-
- .Parameter -IsSharePointOnlineSite
-  Specify if the site is a SharePoint Online site
-
- .Parameter -ListName
-  Name of the list
-
- .Parameter -ListItemID
-  The ID of the item to be deleted
-
- .Parameter -DestinationFolder
-  The destination folder of where attachments will be saved to.
-
- .Example
-  $DownloadAttachments = Get-SPListItemAttachments -SPConnection $SPConnection -ListName "Test List" -ListItemID 1 -DestinationFolder "\\Server01\ShareFolder"
-
- .Example
-  $Username = "you@yourcompany.com"
-  $SecurePassword = ConvertTo-SecureString "password1234" -AsPlainText -Force
-  $MyPSCred = New-Object System.Management.Automation.PSCredential ($Username, $SecurePassword)
-  $DownloadAttachments = Get-SPListItemAttachments -SiteUrl "https://yourcompany.sharepoint.com" -Credential $MyPSCred -IsSPO $true -ListName "Test List" -ListItemID 1 -Destination "\\Server01\ShareFolder"
-#>
+    [OutputType('System.Int32')]
     [CmdletBinding()]
 	Param(
-    [Parameter(ParameterSetName='SMAConnection',Mandatory=$True,HelpMessage='Please specify the SMA Connection object')][Object]$SPConnection,
+    [Parameter(ParameterSetName='SMAConnection',Mandatory=$True,HelpMessage='Please specify the SMA / Azure Autoamtion Connection object')][Object]$SPConnection,
 	[Parameter(ParameterSetName='IndividualParameter',Mandatory=$True,HelpMessage='Please specify the request URL')][String]$SiteUrl,
 	[Parameter(Mandatory=$true,HelpMessage='Please specify the name of the list')][String]$ListName,
-	[Parameter(ParameterSetName='IndividualParameter',Mandatory=$true,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')][Alias('cred')][PSCredential]$Credential,
+	[Parameter(ParameterSetName='IndividualParameter',Mandatory=$true,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')][Alias('cred')]
+    [System.Management.Automation.PSCredential]
+    [System.Management.Automation.CredentialAttribute()]
+    $Credential,
 	[Parameter(ParameterSetName='IndividualParameter',Mandatory=$True,HelpMessage='Please specify if the site is a SharePoint Online site')][Alias('IsSPO')][boolean]$IsSharePointOnlineSite,
 	[Parameter(Mandatory=$true,HelpMessage='Please specify the ID of the list item')][int]$ListItemID,
 	[Parameter(Mandatory=$true,HelpMessage='Please specify the destination folder of where attachments will be saved to')][Alias('Destination')][string]$DestinationFolder
@@ -822,62 +544,14 @@ Function Get-SPListItemAttachments
 	$iDownloadCount
 }
 
+# .EXTERNALHELP SharePointSDK.psm1-Help.xml
 Function Add-SPListItemAttachment
 {
-[OutputType('System.Boolean')]
-<# 
- .Synopsis
-  Upload a file as a SharePoint list item attachment.
-
- .Description
-  Upload a file as a SharePoint list item attachment. Please note this function DOES NOT work on SharePoint 2010 sites.
-  
- .Parameter -SPConnection
-  SharePointSDK Connection object (SMA connection or hash table).
-
- .Parameter -SiteUrl
-  SharePoint Site Url
-
- .Parameter -Credential
-  The PSCredential object that contains the user name and password required to connect to the SharePoint site.
-
- .Parameter -IsSharePointOnlineSite
-  Specify if the site is a SharePoint Online site
-
- .Parameter -ListName
-  Name of the list
-
- .Parameter -ListItemID
-  The ID of the item to be deleted
-
- .Parameter -FilePath
-  The file path of the file to be attached to the list item.
-
- .Example
-  $AddAttachment = Add-SPListItemAttachment -SPConnection $SPConnection -ListName "Test List" -ListItemID 1 -FilePath "\\Server01\ShareFolder\File.txt"
-
- .Example
-  $Username = "you@yourcompany.com"
-  $SecurePassword = ConvertTo-SecureString "password1234" -AsPlainText -Force
-  $MyPSCred = New-Object System.Management.Automation.PSCredential ($Username, $SecurePassword)
-  $AddAttachment = Add-SPListItemAttachment -SiteUrl "https://yourcompany.sharepoint.com" -Credential $MyPSCred -IsSPO $true -ListName "Test List" -ListItemID 1 -FilePath "\\Server01\ShareFolder\File.txt"
-
- .Example
-  $text = "hello world"
-  [Byte[]]$Bytes=[System.Text.Encoding]::Default.GetBytes($text)
-  $AddAttachment = Add-SPListItemAttachment -SPConnection $SPConnection -ListName "Test List" -ListItemID 1 -ContentByteArray $Bytes -FileName "HelloWord.txt"
-
- .Example
-  [Byte[]]$bytes = [System.IO.File]::ReadAllBytes("C:\Temp\Original.zip")
-  $Username = "you@yourcompany.com"
-  $SecurePassword = ConvertTo-SecureString "password1234" -AsPlainText -Force
-  $MyPSCred = New-Object System.Management.Automation.PSCredential ($Username", $SecurePassword)
-  $AddAttachment = Add-SPListItemAttachment -SiteUrl "https://yourcompany.sharepoint.com" -Credential $MyPSCred -IsSPO $true -ListName "Test List" -ListItemID 1 -ContentByteArray $Bytes -FileName "renamed.zip"
-#>
+    [OutputType('System.Boolean')]
     [CmdletBinding()]
 	Param(
-	[Parameter(ParameterSetName="SMAUploadFile",Mandatory=$True,HelpMessage='Please specify the SMA Connection object')]
-    [Parameter(ParameterSetName="SMACreateFile",Mandatory=$True,HelpMessage='Please specify the SMA Connection object')]
+	[Parameter(ParameterSetName="SMAUploadFile",Mandatory=$True,HelpMessage='Please specify the SMA / Azure Autoamtion Connection object')]
+    [Parameter(ParameterSetName="SMACreateFile",Mandatory=$True,HelpMessage='Please specify the SMA / Azure Autoamtion Connection object')]
 	[Object]$SPConnection,
 
 	[Parameter(ParameterSetName="IndividualUploadFile",Mandatory=$True,HelpMessage='Please specify the request URL')]
@@ -889,7 +563,9 @@ Function Add-SPListItemAttachment
     [Parameter(ParameterSetName="IndividualUploadFile",Mandatory=$True,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')]
     [Parameter(ParameterSetName="IndividualCreateFile",Mandatory=$True,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')]	
     [Alias('cred')]
-    [PSCredential]$Credential,
+    [System.Management.Automation.PSCredential]
+    [System.Management.Automation.CredentialAttribute()]
+    $Credential,
 
 	[Parameter(ParameterSetName="IndividualUploadFile",Mandatory=$True,HelpMessage='Please specify if the site is a SharePoint Online site')]
     [Parameter(ParameterSetName="IndividualCreateFile",Mandatory=$True,HelpMessage='Please specify if the site is a SharePoint Online site')]
@@ -1004,52 +680,19 @@ Function Add-SPListItemAttachment
 	$bUploaded
 }
 
+# .EXTERNALHELP SharePointSDK.psm1-Help.xml
 Function Remove-SPListItemAttachment
 {
-[OutputType('System.Int32')]
-<# 
- .Synopsis
-  Remove a SharePoint list item attachment.
-
- .Description
-  Remove a SharePoint list item attachment.  Please note this function DOES NOT work on SharePoint 2010 sites.
-  
- .Parameter -SPConnection
-  SharePointSDK Connection object (SMA connection or hash table).
-
- .Parameter -SiteUrl
-  SharePoint Site Url
-
- .Parameter -Credential
-  The PSCredential object that contains the user name and password required to connect to the SharePoint site.
-
- .Parameter -IsSharePointOnlineSite
-  Specify if the site is a SharePoint Online site
-
- .Parameter -ListName
-  Name of the list
-
- .Parameter -ListItemID
-  The ID of the item to be deleted
-
- .Parameter -FileName
-  The file name of the attachment to be removed from the list item.
-
- .Example
-  $DeleteAttachment = Remove-SPListItemAttachment -SPConnection $SPConnection -ListName "Test List" -ListItemID 1 -FileName "File.txt"
-
- .Example
-  $Username = "you@yourcompany.com"
-  $SecurePassword = ConvertTo-SecureString "password1234" -AsPlainText -Force
-  $MyPSCred = New-Object System.Management.Automation.PSCredential ($Username, $SecurePassword)
-  $DeleteAttachment = Remove-SPListItemAttachment -SiteUrl "https://yourcompany.sharepoint.com" -Credential $MyPSCred -IsSPO $true -ListName "Test List" -ListItemID 1 -FileName "File.txt"
-#>
+    [OutputType('System.Int32')]
     [CmdletBinding()]
 	Param(
-    [Parameter(ParameterSetName='SMAConnection',Mandatory=$True,HelpMessage='Please specify the SMA Connection object')][Object]$SPConnection,
+    [Parameter(ParameterSetName='SMAConnection',Mandatory=$True,HelpMessage='Please specify the SMA / Azure Autoamtion Connection object')][Object]$SPConnection,
 	[Parameter(ParameterSetName='IndividualParameter',Mandatory=$True,HelpMessage='Please specify the request URL')][String]$SiteUrl,
 	[Parameter(Mandatory=$true,HelpMessage='Please specify the name of the list')][String]$ListName,
-	[Parameter(ParameterSetName='IndividualParameter',Mandatory=$true,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')][Alias('cred')][PSCredential]$Credential,
+	[Parameter(ParameterSetName='IndividualParameter',Mandatory=$true,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')][Alias('cred')]
+    [System.Management.Automation.PSCredential]
+    [System.Management.Automation.CredentialAttribute()]
+    $Credential,
 	[Parameter(ParameterSetName='IndividualParameter',Mandatory=$True,HelpMessage='Please specify if the site is a SharePoint Online site')][Alias('IsSPO')][boolean]$IsSharePointOnlineSite,
 	[Parameter(Mandatory=$true,HelpMessage='Please specify the ID of the list item')][int]$ListItemID,
 	[Parameter(Mandatory=$true,HelpMessage='Please specify the file name of the attachment to be removed from the list item')][Alias('Path')][string]$FileName
@@ -1133,4 +776,2982 @@ Function Remove-SPListItemAttachment
 	}
 	Write-Verbose "Number of files deleted: $iDeleted"
 	$iDeleted
+}
+
+# .EXTERNALHELP SharePointSDK.psm1-Help.xml
+Function New-SPList
+{
+    [OutputType('Microsoft.SharePoint.Client.List')]
+    [CmdletBinding()]
+	Param(
+    [Parameter(ParameterSetName='SMAConnection',Mandatory=$True,HelpMessage='Please specify the SMA / Azure Autoamtion connection object')][Object]$SPConnection,
+	[Parameter(ParameterSetName='IndividualParameter',Mandatory=$True,HelpMessage='Please specify the SharePoint Site URL')][String]$SiteUrl,
+	[Parameter(ParameterSetName='IndividualParameter',Mandatory=$true,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')][Alias('cred')]
+    [System.Management.Automation.PSCredential]
+    [System.Management.Automation.CredentialAttribute()]
+    $Credential,
+	[Parameter(ParameterSetName='IndividualParameter',Mandatory=$True,HelpMessage='Please specify if the site is a SharePoint Online site')][Alias('IsSPO')][boolean]$IsSharePointOnlineSite,
+    [Parameter(Mandatory=$true,HelpMessage='Please specify the title of the list')][ValidateNotNullOrEmpty()][String]$ListTitle,
+    [Parameter(Mandatory=$false,HelpMessage='Please specify the description of the list')][String]$ListDescription,
+    [Parameter(Mandatory=$false,HelpMessage='Please specify if the list should be displayed on Quick Launch')][Boolean]$QuickLaunch=$false,
+    [Parameter(Mandatory=$false,HelpMessage='Please specify the list template type')][String]
+    [ValidateScript(
+        {
+            Import-SPClientSDK | out-null
+            if ([Microsoft.SharePoint.Client.ListTemplateType]::$_)
+            {
+                $true
+            } else {
+                $false
+            }
+        }
+        )]$ListTemplateType='GenericList'
+    )
+
+    If($SPConnection)
+	{
+		$SPCredential = New-SPCredential -SPConnection $SPConnection
+		$SiteUrl = $SPConnection.SharePointSiteURL
+	} else {
+		$SPCredential = New-SPCredential -Credential $Credential -IsSharePointOnlineSite $IsSharePointOnlineSite
+	}
+	#Make sure the SharePoint Client SDK Runtime DLLs are loaded
+    Write-Verbose "Loading SharePoint client SDK assemblies."
+	$ImportDLL = Import-SPClientSDK
+
+	#Bind to site collection
+    Write-Verbose "Bind to site collection"
+	$Context = New-Object Microsoft.SharePoint.Client.ClientContext($SiteURL)
+	$Context.Credentials = $SPCredential
+    $web = $Context.Web
+
+    #Create list
+    Write-Verbose "Creating 'Microsoft.SharePoint.Client.ListCreationInformation' object for list `'$ListTitle`'."
+    $CreationInfo = New-object Microsoft.SharePoint.Client.ListCreationInformation
+    $CreationInfo.Title = $ListTitle
+    if ($ListDescription)
+    {
+        Write-Verbose "List Description: '$ListDescription'."
+        $CreationInfo.Description = $ListDescription
+    }
+    $CreationInfo.TemplateType = [Microsoft.SharePoint.Client.ListTemplateType]::$ListTemplateType
+    try
+    {
+        #Create the list
+        write-verbose "Creating list '$ListTitle'."
+        $List = $web.lists.Add($CreationInfo)
+        $List.Update()
+        $Context.ExecuteQuery()
+        #Quick Launch
+        Write-Verbose "List on Quick Launch: '$QuickLaunch'."
+        If ($QuickLaunch -eq $true)
+        {
+            $List.OnQuickLaunch = $QuickLaunch
+            $List.Update()
+            $Context.ExecuteQuery()
+        }
+        #Retrieve the list
+        Write-Verbose "Retrieving the list."
+        $Context.Load($List)
+        $Context.Load($List.Fields)
+        $Context.ExecuteQuery()
+        Write-Verbose "Returning the list."
+        $List
+    } catch {
+        throw $_.Exception.InnerException
+    }
+}
+
+# .EXTERNALHELP SharePointSDK.psm1-Help.xml
+Function Remove-SPList
+{
+    [OutputType('System.Boolean')]
+    [CmdletBinding()]
+	Param(
+    [Parameter(ParameterSetName='SMAByTitle',Mandatory=$True,HelpMessage='Please specify the SMA / Azure Autoamtion connection object')]
+    [Parameter(ParameterSetName='SMAById',Mandatory=$True,HelpMessage='Please specify the SMA / Azure Autoamtion connection object')]
+    [Object]$SPConnection,
+
+	[Parameter(ParameterSetName='IndividualByTitle',Mandatory=$True,HelpMessage='Please specify the SharePoint Site URL')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$True,HelpMessage='Please specify the SharePoint Site URL')]
+    [String]$SiteUrl,
+
+	[Parameter(ParameterSetName='IndividualByTitle',Mandatory=$true,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$true,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')]
+    [Alias('cred')]
+    [System.Management.Automation.PSCredential]
+    [System.Management.Automation.CredentialAttribute()]
+    $Credential,
+
+	[Parameter(ParameterSetName='IndividualByTitle',Mandatory=$True,HelpMessage='Please specify if the site is a SharePoint Online site')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$True,HelpMessage='Please specify if the site is a SharePoint Online site')]
+    [Alias('IsSPO')][boolean]$IsSharePointOnlineSite,
+
+    [Parameter(ParameterSetName='SMAByTitle',Mandatory=$true,HelpMessage='Please specify the title of the list')]
+    [Parameter(ParameterSetName='IndividualByTitle',Mandatory=$true,HelpMessage='Please specify the title of the list')]
+    [ValidateNotNullOrEmpty()][String]$ListTitle,
+
+    [Parameter(ParameterSetName='SMAById',Mandatory=$true,HelpMessage='Please specify the Id of the list')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$true,HelpMessage='Please specify the Id of the list')]
+    [ValidateNotNullOrEmpty()][Guid]$ListId
+    )
+
+    If($SPConnection)
+	{
+		$SPCredential = New-SPCredential -SPConnection $SPConnection
+		$SiteUrl = $SPConnection.SharePointSiteURL
+	} else {
+		$SPCredential = New-SPCredential -Credential $Credential -IsSharePointOnlineSite $IsSharePointOnlineSite
+	}
+	#Make sure the SharePoint Client SDK Runtime DLLs are loaded
+    Write-Verbose "Loading SharePoint client SDK assemblies."
+	$ImportDLL = Import-SPClientSDK
+
+	#Bind to site collection
+    Write-Verbose "Bind to site collection"
+	$Context = New-Object Microsoft.SharePoint.Client.ClientContext($SiteURL)
+	$Context.Credentials = $SPCredential
+    $web = $Context.Web
+    
+    #Get the list
+    Write-Verbose "Getting the SharePoint list."
+    If ($ListTitle)
+    {
+        Write-Verbose "List Title specified: '$ListTitle'."
+        $List = $web.Lists.GetByTitle($ListTitle)
+    } elseif ($ListId) {
+        Write-Verbose "List Id specified: '$($ListId.ToString())'."
+        $List = $web.Lists.GetById($ListId)
+    } else {
+        Throw "Unable to retrieve the list."
+        Return
+    }
+    #Delete the list
+    Write-Verbose "Deleting the list"
+    try {
+        $List.DeleteObject()
+        $Context.ExecuteQuery()
+        $true
+    } catch {
+        throw $_.Exception.InnerException
+        $false
+    }
+}
+
+# .EXTERNALHELP SharePointSDK.psm1-Help.xml
+Function Get-SPList
+{
+    [OutputType('Microsoft.SharePoint.Client.List')]
+    [CmdletBinding()]
+	Param(
+    [Parameter(ParameterSetName='SMAByTitle',Mandatory=$True,HelpMessage='Please specify the SMA / Azure Autoamtion connection object')]
+    [Parameter(ParameterSetName='SMAById',Mandatory=$True,HelpMessage='Please specify the SMA / Azure Autoamtion connection object')]
+    [Object]$SPConnection,
+
+	[Parameter(ParameterSetName='IndividualByTitle',Mandatory=$True,HelpMessage='Please specify the SharePoint Site URL')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$True,HelpMessage='Please specify the SharePoint Site URL')]
+    [String]$SiteUrl,
+
+	[Parameter(ParameterSetName='IndividualByTitle',Mandatory=$true,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$true,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')]
+    [Alias('cred')]
+    [System.Management.Automation.PSCredential]
+    [System.Management.Automation.CredentialAttribute()]
+    $Credential,
+
+	[Parameter(ParameterSetName='IndividualByTitle',Mandatory=$True,HelpMessage='Please specify if the site is a SharePoint Online site')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$True,HelpMessage='Please specify if the site is a SharePoint Online site')]
+    [Alias('IsSPO')][boolean]$IsSharePointOnlineSite,
+
+    [Parameter(ParameterSetName='SMAByTitle',Mandatory=$true,HelpMessage='Please specify the title of the list')]
+    [Parameter(ParameterSetName='IndividualByTitle',Mandatory=$true,HelpMessage='Please specify the title of the list')]
+    [ValidateNotNullOrEmpty()][String]$ListTitle,
+
+    [Parameter(ParameterSetName='SMAById',Mandatory=$true,HelpMessage='Please specify the Id of the list')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$true,HelpMessage='Please specify the Id of the list')]
+    [ValidateNotNullOrEmpty()][Guid]$ListId
+    )
+
+    If($SPConnection)
+	{
+		$SPCredential = New-SPCredential -SPConnection $SPConnection
+		$SiteUrl = $SPConnection.SharePointSiteURL
+	} else {
+		$SPCredential = New-SPCredential -Credential $Credential -IsSharePointOnlineSite $IsSharePointOnlineSite
+	}
+	#Make sure the SharePoint Client SDK Runtime DLLs are loaded
+    Write-Verbose "Loading SharePoint client SDK assemblies."
+	$ImportDLL = Import-SPClientSDK
+
+	#Bind to site collection
+    Write-Verbose "Bind to site collection"
+	$Context = New-Object Microsoft.SharePoint.Client.ClientContext($SiteURL)
+	$Context.Credentials = $SPCredential
+    $web = $Context.Web
+    
+    #Get the list
+    Write-Verbose "Getting the SharePoint list."
+    If ($ListTitle)
+    {
+        Write-Verbose "List Title specified: '$ListTitle'."
+        $List = $web.Lists.GetByTitle($ListTitle)
+    } elseif ($ListId) {
+        Write-Verbose "List Id specified: '$($ListId.ToString())'."
+        $List = $web.Lists.GetById($ListId)
+    } else {
+        Throw "Unable to retrieve the list."
+        Return
+    }
+    $Context.Load($List)
+    $Context.Load($List.Fields)
+    $Context.ExecuteQuery()
+    Return $List
+}
+
+# .EXTERNALHELP SharePointSDK.psm1-Help.xml
+Function New-SPListLookupField
+{
+    [OutputType('System.Boolean')]
+    [CmdletBinding()]
+	Param(
+    [Parameter(ParameterSetName='SMAByTitle',Mandatory=$True,HelpMessage='Please specify the SMA / Azure Autoamtion connection object')]
+    [Parameter(ParameterSetName='SMAById',Mandatory=$True,HelpMessage='Please specify the SMA / Azure Autoamtion connection object')]
+    [Object]$SPConnection,
+
+	[Parameter(ParameterSetName='IndividualByTitle',Mandatory=$True,HelpMessage='Please specify the SharePoint Site URL')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$True,HelpMessage='Please specify the SharePoint Site URL')]
+    [String]$SiteUrl,
+
+	[Parameter(ParameterSetName='IndividualByTitle',Mandatory=$true,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$true,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')]
+    [Alias('cred')]
+    [System.Management.Automation.PSCredential]
+    [System.Management.Automation.CredentialAttribute()]
+    $Credential,
+
+	[Parameter(ParameterSetName='IndividualByTitle',Mandatory=$True,HelpMessage='Please specify if the site is a SharePoint Online site')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$True,HelpMessage='Please specify if the site is a SharePoint Online site')]
+    [Alias('IsSPO')][boolean]$IsSharePointOnlineSite,
+
+    [Parameter(ParameterSetName='SMAByTitle',Mandatory=$true,HelpMessage='Please specify the title of the list')]
+    [Parameter(ParameterSetName='IndividualByTitle',Mandatory=$true,HelpMessage='Please specify the title of the list')]
+    [ValidateNotNullOrEmpty()][String]$ListTitle,
+
+    [Parameter(ParameterSetName='SMAById',Mandatory=$true,HelpMessage='Please specify the Id of the list')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$true,HelpMessage='Please specify the Id of the list')]
+    [ValidateNotNullOrEmpty()][Guid]$ListId,
+
+    [Parameter(Mandatory=$true,HelpMessage='Please specify the name of the Field')]
+    [ValidateNotNullOrEmpty()][Alias('ColumnName')][String]$FieldName,
+
+    [Parameter(Mandatory=$true,HelpMessage='Please specify the display name of the Field')]
+    [ValidateNotNullOrEmpty()][Alias('ColumnDisplayName')][String]$FieldDisplayName,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify the name of the Field')]
+    [ValidateNotNullOrEmpty()][Alias('ColumnDescription')][String]$FieldDescription=$null,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify if this Field is a required Field')]
+    [ValidateNotNullOrEmpty()][Boolean]$Required = $false,
+
+    [Parameter(Mandatory=$true,HelpMessage='Please specify the Id of the source list of where the lookup field is getting information from')]
+    [ValidateNotNullOrEmpty()][Guid]$SourceListId,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify the Field Relationship Delete Behavior')]
+    [ValidateSet('None', 'Restrict', 'Cascade')][String]$RelationshipDeleteBehavior = 'None',
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify if this Field should be added to the default view')]
+    [ValidateNotNullOrEmpty()][Boolean]$AddToDefaultView = $true,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify if this Field should enforce unique values')]
+    [ValidateNotNullOrEmpty()][Alias('unique')][Boolean]$EnforceUniqueValues = $false,
+
+    [Parameter(Mandatory=$true,HelpMessage="Please specify the field to be displayed")]
+    [ValidateNotNullOrEmpty()][String]$ShowField,
+
+    [Parameter(Mandatory=$false,HelpMessage="Please specify the additional fields from the source list to be added")]
+    [ValidateNotNullOrEmpty()][String[]]$AdditionalSourceFields,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify the if this field should be shown in the edit form')]
+    [ValidateNotNullOrEmpty()][Boolean]$ShowInEditForm = $true,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify the if this field should be shown in the new form')]
+    [ValidateNotNullOrEmpty()][Boolean]$ShowInNewForm = $true,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify the if this field should be shown in the display form')]
+    [ValidateNotNullOrEmpty()][Boolean]$ShowInDisplayForm = $true
+    )
+
+    If($SPConnection)
+	{
+		$SPCredential = New-SPCredential -SPConnection $SPConnection
+		$SiteUrl = $SPConnection.SharePointSiteURL
+	} else {
+		$SPCredential = New-SPCredential -Credential $Credential -IsSharePointOnlineSite $IsSharePointOnlineSite
+	}
+
+	#Make sure the SharePoint Client SDK Runtime DLLs are loaded
+    Write-Verbose "Loading SharePoint client SDK assemblies."
+	$ImportDLL = Import-SPClientSDK
+
+	#Bind to site collection
+    Write-Verbose "Bind to site collection"
+	$Context = New-Object Microsoft.SharePoint.Client.ClientContext($SiteURL)
+	$Context.Credentials = $SPCredential
+    $web = $Context.Web
+    $Context.Load($web)
+    $Context.ExecuteQuery()
+    
+    #Get the list
+    Write-Verbose "Getting the SharePoint list."
+    If ($ListTitle)
+    {
+        Write-Verbose "List Title specified: '$ListTitle'."
+        $List = $web.Lists.GetByTitle($ListTitle)
+    } elseif ($ListId) {
+        Write-Verbose "List Id specified: '$($ListId.ToString())'."
+        $List = $web.Lists.GetById($ListId)
+    } else {
+        Throw "Unable to retrieve the list."
+        Return
+    }
+    #Load the list
+    $Context.Load($List)
+    $Context.ExecuteQuery()
+    $strListId = $List.Id.ToString()
+
+    #set the source list to itself if the SourceListId is not specified
+    if (!$SourceListId)
+    {
+        $SourceListId = $strListId
+    } else {
+        $SourceListId = $SourceListId.ToString()
+    }
+    
+    #Index
+    if ($RelationshipDeleteBehavior -ieq 'cascade' -or $RelationshipDeleteBehavior -ieq 'restrict' -or $EnforceUniqueValues -eq $true)
+    {
+        $bIndexed = $True
+    } else {
+        $bIndexed = $false
+    }
+    Write-Verbose "List Id: '$strListId'."
+    $LookupFieldGUID = [System.Guid]::NewGuid().ToString()
+    $fieldXML = "<Field Type='Lookup' ID='{$LookupFieldGUID}' DisplayName='$FieldDisplayName' List='{$SourceListId}' ShowField='$ShowField' RelationshipDeleteBehavior='$RelationshipDeleteBehavior' Name='$FieldName' StaticName='$FieldName' Description='$FieldDescription' Required='$($Required.ToString().ToUpper())' EnforceUniqueValues='$($EnforceUniqueValues.ToString().ToUpper())' Indexed='$($bIndexed.ToString().ToUpper())'/>"
+    
+    Write-Verbose "Field XML: `"$fieldXML`""
+    Write-Verbose "Adding the Field to the list"
+    
+    try
+    {
+        if ($AddToDefaultView)
+        {
+            Write-Verbose "The Field will be added to the default view."
+            $List.Fields.AddFieldAsXml($fieldXml,$true, [Microsoft.SharePoint.Client.AddFieldOptions]::DefaultValue)
+        } else {
+            Write-Verbose "The Field will NOT be added to the default view."
+            $List.Fields.AddFieldAsXml($fieldXml,$false, [Microsoft.SharePoint.Client.AddFieldOptions]::DefaultValue)
+        }
+        $list.Update()
+        $Context.ExecuteQuery()
+
+        #Update the field
+        Write-Verbose "Field will show in display form: $ShowInDisplayForm"
+        Write-Verbose "Field will show in edit form: $ShowInEditForm"
+        Write-Verbose "Field will show in new form: $ShowInNewForm"
+
+        $Context.Load($List.Fields)
+        $Context.ExecuteQuery()
+        $ThisField = $List.Fields.GetByInternalNameOrTitle($FieldDisplayName)
+        $Context.Load($ThisField)
+        $Context.ExecuteQuery()
+        If ($AdditionalSourceFields.count -gt 0)
+        {
+            Write-Verbose "Adding additional lookup fields from the source list."
+            Write-Verbose "Retrieving the source list first."
+            $SourceList = $web.Lists.GetById($SourceListId)
+            $Context.Load($SourceList)
+            $Context.Load($SourceList.Fields)
+            $Context.ExecuteQuery()
+            Write-Verbose "Source List Title: '$($SourceList.Title)'."
+            Foreach ($AdditionalFieldDisplayName in $AdditionalSourceFields)
+            {
+                $WebId = $Web.Id
+                Write-Verbose "Additional field name: '$AdditionalFieldName'."
+                $SourceField = $SourceList.Fields.GetByInternalNameOrTitle($AdditionalFieldDisplayName)
+                $Context.Load($SourceField)
+                $Context.ExecuteQuery()
+                #$SourceFieldVersion= $([xml]$SourceField.SchemaXml).Field.Version
+                $SourceFieldStaticName = $SourceField.StaticName
+                $SourceFieldInternalName = $SourceField.InternalName
+                Write-Verbose "Source Field Static Name: '$SourceFieldStaticName'."
+                $AdditionalFieldGUID = [System.Guid]::NewGuid().ToString()
+                $AdditionalFieldName = "$FieldDisplayName`_$SourceFieldStaticName"
+                $AdditionalFieldXML = "<Field Type='Lookup' DisplayName='$FieldDisplayName`:$AdditionalFieldDisplayName' List='{$SourceListId}' WebId='$WebId' ShowField='$SourceFieldInternalName' FieldRef='$LookupFieldGUID' ReadOnly='TRUE' UnlimitedLengthInDocumentLibrary='FALSE' ID='{$AdditionalFieldGUID}' SourceID='{$($List.Id.ToString())}' StaticName='$AdditionalFieldName' Name='$AdditionalFieldName'/>"
+                #$AdditionalFieldXML = "<Field Type='Lookup' DisplayName='$FieldDisplayName`:$AdditionalFieldDisplayName' List='{$SourceListId}' WebId='$WebId' ShowField='$SourceFieldInternalName' FieldRef='$LookupFieldGUID' ReadOnly='TRUE' UnlimitedLengthInDocumentLibrary='FALSE' ID='{$AdditionalFieldGUID}' SourceID='{$($List.Id.ToString())}' StaticName='$AdditionalFieldName' Name='$AdditionalFieldName' Version='$SourceFieldVersion'/>"
+                
+                Write-Verbose "Additional field XML: '$AdditionalFieldXML'"
+                if ($AddToDefaultView)
+                {
+                    Write-Verbose "The additional field will be added to the default view."
+                    $List.Fields.AddFieldAsXml($AdditionalFieldXML,$true, [Microsoft.SharePoint.Client.AddFieldOptions]::AddFieldToDefaultView)
+                } else {
+                    Write-Verbose "The additional field will NOT be added to the default view."
+                    $List.Fields.AddFieldAsXml($AdditionalFieldXML,$false, [Microsoft.SharePoint.Client.AddFieldOptions]::DefaultValue)
+                }
+                $List.Update()
+                $Context.ExecuteQuery()
+            }
+        }
+
+        $ThisField.SetShowInDisplayForm($ShowInDisplayForm)
+        $ThisField.SetShowInEditForm($ShowInEditForm)
+        $ThisField.SetShowInNewForm($ShowInNewForm)
+        $ThisField.Update()
+        $Context.ExecuteQuery()
+        $true
+    } catch {
+        Throw $_.exception.innerexception
+        $false
+    }
+}
+
+# .EXTERNALHELP SharePointSDK.psm1-Help.xml
+Function New-SPListCheckboxField
+{
+    [OutputType('System.Boolean')]
+    [CmdletBinding()]
+	Param(
+    [Parameter(ParameterSetName='SMAByTitle',Mandatory=$True,HelpMessage='Please specify the SMA / Azure Autoamtion connection object')]
+    [Parameter(ParameterSetName='SMAById',Mandatory=$True,HelpMessage='Please specify the SMA / Azure Autoamtion connection object')]
+    [Object]$SPConnection,
+
+	[Parameter(ParameterSetName='IndividualByTitle',Mandatory=$True,HelpMessage='Please specify the SharePoint Site URL')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$True,HelpMessage='Please specify the SharePoint Site URL')]
+    [String]$SiteUrl,
+
+	[Parameter(ParameterSetName='IndividualByTitle',Mandatory=$true,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$true,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')]
+    [Alias('cred')]
+    [System.Management.Automation.PSCredential]
+    [System.Management.Automation.CredentialAttribute()]
+    $Credential,
+
+	[Parameter(ParameterSetName='IndividualByTitle',Mandatory=$True,HelpMessage='Please specify if the site is a SharePoint Online site')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$True,HelpMessage='Please specify if the site is a SharePoint Online site')]
+    [Alias('IsSPO')][boolean]$IsSharePointOnlineSite,
+
+    [Parameter(ParameterSetName='SMAByTitle',Mandatory=$true,HelpMessage='Please specify the title of the list')]
+    [Parameter(ParameterSetName='IndividualByTitle',Mandatory=$true,HelpMessage='Please specify the title of the list')]
+    [ValidateNotNullOrEmpty()][String]$ListTitle,
+
+    [Parameter(ParameterSetName='SMAById',Mandatory=$true,HelpMessage='Please specify the Id of the list')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$true,HelpMessage='Please specify the Id of the list')]
+    [ValidateNotNullOrEmpty()][Guid]$ListId,
+
+    [Parameter(Mandatory=$true,HelpMessage='Please specify the name of the Field')]
+    [ValidateNotNullOrEmpty()][Alias('ColumnName')][String]$FieldName,
+
+    [Parameter(Mandatory=$true,HelpMessage='Please specify the display name of the Field')]
+    [ValidateNotNullOrEmpty()][Alias('ColumnDisplayName')][String]$FieldDisplayName,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify the name of the Field')]
+    [ValidateNotNullOrEmpty()][Alias('ColumnDescription')][String]$FieldDescription= $Null,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify if this Field is checked by default')]
+    [ValidateNotNullOrEmpty()][Boolean]$CheckedByDefault = $true,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify if this Field should be added to the default view')]
+    [ValidateNotNullOrEmpty()][Boolean]$AddToDefaultView = $true,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify the if this field should be shown in the edit form')]
+    [ValidateNotNullOrEmpty()][Boolean]$ShowInEditForm = $true,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify the if this field should be shown in the new form')]
+    [ValidateNotNullOrEmpty()][Boolean]$ShowInNewForm = $true,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify the if this field should be shown in the display form')]
+    [ValidateNotNullOrEmpty()][Boolean]$ShowInDisplayForm = $true
+    )
+
+    If($SPConnection)
+	{
+		$SPCredential = New-SPCredential -SPConnection $SPConnection
+		$SiteUrl = $SPConnection.SharePointSiteURL
+	} else {
+		$SPCredential = New-SPCredential -Credential $Credential -IsSharePointOnlineSite $IsSharePointOnlineSite
+	}
+	#Make sure the SharePoint Client SDK Runtime DLLs are loaded
+    Write-Verbose "Loading SharePoint client SDK assemblies."
+	$ImportDLL = Import-SPClientSDK
+
+	#Bind to site collection
+    Write-Verbose "Bind to site collection"
+	$Context = New-Object Microsoft.SharePoint.Client.ClientContext($SiteURL)
+	$Context.Credentials = $SPCredential
+    $web = $Context.Web
+    
+    #Get the list
+    Write-Verbose "Getting the SharePoint list."
+    If ($ListTitle)
+    {
+        Write-Verbose "List Title specified: '$ListTitle'."
+        $List = $web.Lists.GetByTitle($ListTitle)
+    } elseif ($ListId) {
+        Write-Verbose "List Id specified: '$($ListId.ToString())'."
+        $List = $web.Lists.GetById($ListId)
+    } else {
+        Throw "Unable to retrieve the list."
+        Return
+    }
+    #Load the list
+    $Context.Load($List)
+    $Context.ExecuteQuery()
+    $strListId = $List.Id.ToString()
+    
+    #Determine the integer for the default value
+    if ($CheckedByDefault)
+    {
+        $iDefault = 1
+    } else {
+        $iDefault = 0
+    }
+
+    Write-Verbose "List Id: '$strListId'."
+    $fieldXML = "<Field Type='Boolean' DisplayName='$FieldDisplayName' Name='$FieldName' Description='$FieldDescription'><Default>$iDefault</Default></Field>"
+    Write-Verbose "Field XML: `"$fieldXML`""
+    Write-Verbose "Adding the Field to the list"
+    
+    try
+    {
+        if ($AddToDefaultView)
+        {
+            $List.Fields.AddFieldAsXml($fieldXml,$true, [Microsoft.SharePoint.Client.AddFieldOptions]::AddFieldToDefaultView)
+        } else {
+            $List.Fields.AddFieldAsXml($fieldXml,$false, [Microsoft.SharePoint.Client.AddFieldOptions]::DefaultValue)
+        }
+        $list.Update()
+        $Context.ExecuteQuery()
+
+        #Update the field
+        Write-Verbose "Field will show in display form: $ShowInDisplayForm"
+        Write-Verbose "Field will show in edit form: $ShowInEditForm"
+        Write-Verbose "Field will show in new form: $ShowInNewForm"
+
+        $Context.Load($List.Fields)
+        $Context.ExecuteQuery()
+        $ThisField = $List.Fields.GetByInternalNameOrTitle($FieldDisplayName)
+        $ThisField.SetShowInDisplayForm($ShowInDisplayForm)
+        $ThisField.SetShowInEditForm($ShowInEditForm)
+        $ThisField.SetShowInNewForm($ShowInNewForm)
+        $ThisField.Update()
+        $Context.ExecuteQuery()
+        $true
+    } catch {
+        Throw $_.exception.innerexception
+        $false
+    }
+}
+
+# .EXTERNALHELP SharePointSDK.psm1-Help.xml
+Function New-SPListSingleLineTextField
+{
+    [OutputType('System.Boolean')]
+    [CmdletBinding()]
+	Param(
+    [Parameter(ParameterSetName='SMAByTitle',Mandatory=$True,HelpMessage='Please specify the SMA / Azure Autoamtion connection object')]
+    [Parameter(ParameterSetName='SMAById',Mandatory=$True,HelpMessage='Please specify the SMA / Azure Autoamtion connection object')]
+    [Object]$SPConnection,
+
+	[Parameter(ParameterSetName='IndividualByTitle',Mandatory=$True,HelpMessage='Please specify the SharePoint Site URL')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$True,HelpMessage='Please specify the SharePoint Site URL')]
+    [String]$SiteUrl,
+
+	[Parameter(ParameterSetName='IndividualByTitle',Mandatory=$true,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$true,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')]
+    [Alias('cred')]
+    [System.Management.Automation.PSCredential]
+    [System.Management.Automation.CredentialAttribute()]
+    $Credential,
+
+	[Parameter(ParameterSetName='IndividualByTitle',Mandatory=$True,HelpMessage='Please specify if the site is a SharePoint Online site')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$True,HelpMessage='Please specify if the site is a SharePoint Online site')]
+    [Alias('IsSPO')][boolean]$IsSharePointOnlineSite,
+
+    [Parameter(ParameterSetName='SMAByTitle',Mandatory=$true,HelpMessage='Please specify the title of the list')]
+    [Parameter(ParameterSetName='IndividualByTitle',Mandatory=$true,HelpMessage='Please specify the title of the list')]
+    [ValidateNotNullOrEmpty()][String]$ListTitle,
+
+    [Parameter(ParameterSetName='SMAById',Mandatory=$true,HelpMessage='Please specify the Id of the list')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$true,HelpMessage='Please specify the Id of the list')]
+    [ValidateNotNullOrEmpty()][Guid]$ListId,
+
+    [Parameter(Mandatory=$true,HelpMessage='Please specify the name of the Field')]
+    [ValidateNotNullOrEmpty()][Alias('ColumnName')][String]$FieldName,
+
+    [Parameter(Mandatory=$true,HelpMessage='Please specify the display name of the Field')]
+    [ValidateNotNullOrEmpty()][Alias('ColumnDisplayName')][String]$FieldDisplayName,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify the name of the Field')]
+    [ValidateNotNullOrEmpty()][Alias('ColumnDescription')][String]$FieldDescription=$null,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify if this Field is a required Field')]
+    [ValidateNotNullOrEmpty()][Boolean]$Required = $false,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify the maximum number of characters for this Field')]
+    [ValidateRange(1,255)][Int]$MaxLength = 255,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify if this Field should be added to the default view')]
+    [ValidateNotNullOrEmpty()][Boolean]$AddToDefaultView = $true,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify if this Field should enforce unique values')]
+    [ValidateNotNullOrEmpty()][Alias('unique')][Boolean]$EnforceUniqueValues = $false,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify if this Field should be added to the default view')]
+    [ValidateNotNullOrEmpty()][String]$DefaultValue,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify the if this field should be shown in the edit form')]
+    [ValidateNotNullOrEmpty()][Boolean]$ShowInEditForm = $true,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify the if this field should be shown in the new form')]
+    [ValidateNotNullOrEmpty()][Boolean]$ShowInNewForm = $true,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify the if this field should be shown in the display form')]
+    [ValidateNotNullOrEmpty()][Boolean]$ShowInDisplayForm = $true
+    )
+
+    If($SPConnection)
+	{
+		$SPCredential = New-SPCredential -SPConnection $SPConnection
+		$SiteUrl = $SPConnection.SharePointSiteURL
+	} else {
+		$SPCredential = New-SPCredential -Credential $Credential -IsSharePointOnlineSite $IsSharePointOnlineSite
+	}
+	#Make sure the SharePoint Client SDK Runtime DLLs are loaded
+    Write-Verbose "Loading SharePoint client SDK assemblies."
+	$ImportDLL = Import-SPClientSDK
+
+	#Bind to site collection
+    Write-Verbose "Bind to site collection"
+	$Context = New-Object Microsoft.SharePoint.Client.ClientContext($SiteURL)
+	$Context.Credentials = $SPCredential
+    $web = $Context.Web
+    
+    #Get the list
+    Write-Verbose "Getting the SharePoint list."
+    If ($ListTitle)
+    {
+        Write-Verbose "List Title specified: '$ListTitle'."
+        $List = $web.Lists.GetByTitle($ListTitle)
+    } elseif ($ListId) {
+        Write-Verbose "List Id specified: '$($ListId.ToString())'."
+        $List = $web.Lists.GetById($ListId)
+    } else {
+        Throw "Unable to retrieve the list."
+        Return
+    }
+    #Load the list
+    $Context.Load($List)
+    $Context.ExecuteQuery()
+    $strListId = $List.Id.ToString()
+
+    #Index
+    if ($EnforceUniqueValues -eq $true)
+    {
+        $bIndexed = $True
+    } else {
+        $bIndexed = $false
+    }
+        
+    Write-Verbose "List Id: '$strListId'."
+    If ($DefaultValue.Length -eq 0)
+    {
+        $fieldXML = "<Field Type='Text' DisplayName='$FieldDisplayName' Name='$FieldName' Description='$FieldDescription' Required='$($Required.ToString().ToUpper())' EnforceUniqueValues='$($EnforceUniqueValues.ToString().ToUpper())' Indexed='$($bIndexed.ToString().ToUpper())' MaxLength='$MaxLength' />"
+    } else {
+        $fieldXML = "<Field Type='Text' DisplayName='$FieldDisplayName' Name='$FieldName' Description='$FieldDescription' Required='$($Required.ToString().ToUpper())' EnforceUniqueValues='$($EnforceUniqueValues.ToString().ToUpper())' Indexed='$($bIndexed.ToString().ToUpper())' MaxLength='$MaxLength' ><Default>$DefaultValue</Default></Field>"
+    } 
+    Write-Verbose "Field XML: `"$fieldXML`""
+    Write-Verbose "Adding the Field to the list"
+    
+    try
+    {
+        if ($AddToDefaultView)
+        {
+            Write-Verbose "The Field will be added to the default view."
+            $List.Fields.AddFieldAsXml($fieldXml,$true, [Microsoft.SharePoint.Client.AddFieldOptions]::AddFieldToDefaultView)
+        } else {
+            Write-Verbose "The Field will NOT be added to the default view."
+            $List.Fields.AddFieldAsXml($fieldXml,$false, [Microsoft.SharePoint.Client.AddFieldOptions]::DefaultValue)
+        }
+        $list.Update()
+        $Context.ExecuteQuery()
+
+        #Update the field
+        Write-Verbose "Field will show in display form: $ShowInDisplayForm"
+        Write-Verbose "Field will show in edit form: $ShowInEditForm"
+        Write-Verbose "Field will show in new form: $ShowInNewForm"
+
+        $Context.Load($List.Fields)
+        $Context.ExecuteQuery()
+        $ThisField = $List.Fields.GetByInternalNameOrTitle($FieldDisplayName)
+        $ThisField.SetShowInDisplayForm($ShowInDisplayForm)
+        $ThisField.SetShowInEditForm($ShowInEditForm)
+        $ThisField.SetShowInNewForm($ShowInNewForm)
+        $ThisField.Update()
+        $Context.ExecuteQuery()
+        $true
+    } catch {
+        Throw $_.exception.innerexception
+        $false
+    }
+}
+
+# .EXTERNALHELP SharePointSDK.psm1-Help.xml
+Function New-SPListMultiLineTextField
+{
+    [OutputType('System.Boolean')]
+    [CmdletBinding()]
+	Param(
+    [Parameter(ParameterSetName='SMAByTitle',Mandatory=$True,HelpMessage='Please specify the SMA / Azure Autoamtion connection object')]
+    [Parameter(ParameterSetName='SMAById',Mandatory=$True,HelpMessage='Please specify the SMA / Azure Autoamtion connection object')]
+    [Object]$SPConnection,
+
+	[Parameter(ParameterSetName='IndividualByTitle',Mandatory=$True,HelpMessage='Please specify the SharePoint Site URL')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$True,HelpMessage='Please specify the SharePoint Site URL')]
+    [String]$SiteUrl,
+
+	[Parameter(ParameterSetName='IndividualByTitle',Mandatory=$true,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$true,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')]
+    [Alias('cred')]
+    [System.Management.Automation.PSCredential]
+    [System.Management.Automation.CredentialAttribute()]
+    $Credential,
+
+	[Parameter(ParameterSetName='IndividualByTitle',Mandatory=$True,HelpMessage='Please specify if the site is a SharePoint Online site')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$True,HelpMessage='Please specify if the site is a SharePoint Online site')]
+    [Alias('IsSPO')][boolean]$IsSharePointOnlineSite,
+
+    [Parameter(ParameterSetName='SMAByTitle',Mandatory=$true,HelpMessage='Please specify the title of the list')]
+    [Parameter(ParameterSetName='IndividualByTitle',Mandatory=$true,HelpMessage='Please specify the title of the list')]
+    [ValidateNotNullOrEmpty()][String]$ListTitle,
+
+    [Parameter(ParameterSetName='SMAById',Mandatory=$true,HelpMessage='Please specify the Id of the list')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$true,HelpMessage='Please specify the Id of the list')]
+    [ValidateNotNullOrEmpty()][Guid]$ListId,
+
+    [Parameter(Mandatory=$true,HelpMessage='Please specify the name of the Field')]
+    [ValidateNotNullOrEmpty()][Alias('ColumnName')][String]$FieldName,
+
+    [Parameter(Mandatory=$true,HelpMessage='Please specify the display name of the Field')]
+    [ValidateNotNullOrEmpty()][Alias('ColumnDisplayName')][String]$FieldDisplayName,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify the name of the Field')]
+    [ValidateNotNullOrEmpty()][Alias('ColumnDescription')][String]$FieldDescription=$Null,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify if this Field is a required Field')]
+    [ValidateNotNullOrEmpty()][Boolean]$Required = $false,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify the number of lines for this Field')]
+    [ValidateScript({$_ -ge 1})][Int]$NumberOfLines = 6,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify if this Field should be added to the default view')]
+    [ValidateNotNullOrEmpty()][Boolean]$AddToDefaultView = $true,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify if this Field can contain Rich Text')]
+    [ValidateNotNullOrEmpty()][Boolean]$RichText = $false,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify the rich text type for the Field')]
+    [ValidateScript({if ($RichText -eq $true){$_ -ieq 'compatiple' -or $_ -ieq 'fullhtml'}})]
+    [ValidateSet('Compatiple','FullHTML')]
+    [String]$RichTextMode,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify the if this field should be shown in the edit form')]
+    [ValidateNotNullOrEmpty()][Boolean]$ShowInEditForm = $true,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify the if this field should be shown in the new form')]
+    [ValidateNotNullOrEmpty()][Boolean]$ShowInNewForm = $true,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify the if this field should be shown in the display form')]
+    [ValidateNotNullOrEmpty()][Boolean]$ShowInDisplayForm = $true
+    )
+
+    If($SPConnection)
+	{
+		$SPCredential = New-SPCredential -SPConnection $SPConnection
+		$SiteUrl = $SPConnection.SharePointSiteURL
+	} else {
+		$SPCredential = New-SPCredential -Credential $Credential -IsSharePointOnlineSite $IsSharePointOnlineSite
+	}
+	#Make sure the SharePoint Client SDK Runtime DLLs are loaded
+    Write-Verbose "Loading SharePoint client SDK assemblies."
+	$ImportDLL = Import-SPClientSDK
+
+	#Bind to site collection
+    Write-Verbose "Bind to site collection"
+	$Context = New-Object Microsoft.SharePoint.Client.ClientContext($SiteURL)
+	$Context.Credentials = $SPCredential
+    $web = $Context.Web
+    
+    #Get the list
+    Write-Verbose "Getting the SharePoint list."
+    If ($ListTitle)
+    {
+        Write-Verbose "List Title specified: '$ListTitle'."
+        $List = $web.Lists.GetByTitle($ListTitle)
+    } elseif ($ListId) {
+        Write-Verbose "List Id specified: '$($ListId.ToString())'."
+        $List = $web.Lists.GetById($ListId)
+    } else {
+        Throw "Unable to retrieve the list."
+        Return
+    }
+    #Load the list
+    $Context.Load($List)
+    $Context.ExecuteQuery()
+    $strListId = $List.Id.ToString()
+        
+    Write-Verbose "List Id: '$strListId'."
+    Write-Verbose "Rich Text: $RichText"
+    If ($RichText -eq $false)
+    {
+        $fieldXML = "<Field Type='Note' DisplayName='$FieldDisplayName' Name='$FieldName' Description='$FieldDescription' Required='$($Required.ToString().ToUpper())' Sortable='FALSE' StaticName='$FieldName' NumLines='$NumberOfLines' RichText='FALSE'/>"
+    } else {
+        switch ($RichTextMode.ToLower())
+        {
+            'compatiple' {$strRichTextMode = 'Compatiple'}
+            'fullhtml' {$strRichTextMode = 'FullHtml'}
+        }
+        $fieldXML = "<Field Type='Note' DisplayName='$FieldDisplayName' Name='$FieldName' Description='$FieldDescription' Required='$($Required.ToString().ToUpper())' Sortable='FALSE' StaticName='$FieldName' NumLines='$NumberOfLines' RichText='TRUE' RichTextMode='$strRichTextMode'/>"
+    } 
+    Write-Verbose "Field XML: `"$fieldXML`""
+    Write-Verbose "Adding the Field to the list"
+    
+    try
+    {
+        if ($AddToDefaultView)
+        {
+            Write-Verbose "The Field will be added to the default view."
+            $List.Fields.AddFieldAsXml($fieldXml,$true, [Microsoft.SharePoint.Client.AddFieldOptions]::AddFieldToDefaultView)
+        } else {
+            Write-Verbose "The Field will NOT be added to the default view."
+            $List.Fields.AddFieldAsXml($fieldXml,$false, [Microsoft.SharePoint.Client.AddFieldOptions]::DefaultValue)
+        }
+        $list.Update()
+        $Context.ExecuteQuery()
+
+        #Update the field
+        Write-Verbose "Field will show in display form: $ShowInDisplayForm"
+        Write-Verbose "Field will show in edit form: $ShowInEditForm"
+        Write-Verbose "Field will show in new form: $ShowInNewForm"
+
+        $Context.Load($List.Fields)
+        $Context.ExecuteQuery()
+        $ThisField = $List.Fields.GetByInternalNameOrTitle($FieldDisplayName)
+        $ThisField.SetShowInDisplayForm($ShowInDisplayForm)
+        $ThisField.SetShowInEditForm($ShowInEditForm)
+        $ThisField.SetShowInNewForm($ShowInNewForm)
+        $ThisField.Update()
+        $Context.ExecuteQuery()
+        $true
+    } catch {
+        Throw $_.exception.innerexception
+        $false
+    }
+}
+
+# .EXTERNALHELP SharePointSDK.psm1-Help.xml
+Function New-SPListNumberField
+{
+    [OutputType('System.Boolean')]
+    [CmdletBinding()]
+	Param(
+    [Parameter(ParameterSetName='SMAByTitle',Mandatory=$True,HelpMessage='Please specify the SMA / Azure Autoamtion connection object')]
+    [Parameter(ParameterSetName='SMAById',Mandatory=$True,HelpMessage='Please specify the SMA / Azure Autoamtion connection object')]
+    [Object]$SPConnection,
+
+	[Parameter(ParameterSetName='IndividualByTitle',Mandatory=$True,HelpMessage='Please specify the SharePoint Site URL')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$True,HelpMessage='Please specify the SharePoint Site URL')]
+    [String]$SiteUrl,
+
+	[Parameter(ParameterSetName='IndividualByTitle',Mandatory=$true,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$true,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')]
+    [Alias('cred')]
+    [System.Management.Automation.PSCredential]
+    [System.Management.Automation.CredentialAttribute()]
+    $Credential,
+
+	[Parameter(ParameterSetName='IndividualByTitle',Mandatory=$True,HelpMessage='Please specify if the site is a SharePoint Online site')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$True,HelpMessage='Please specify if the site is a SharePoint Online site')]
+    [Alias('IsSPO')][boolean]$IsSharePointOnlineSite,
+
+    [Parameter(ParameterSetName='SMAByTitle',Mandatory=$true,HelpMessage='Please specify the title of the list')]
+    [Parameter(ParameterSetName='IndividualByTitle',Mandatory=$true,HelpMessage='Please specify the title of the list')]
+    [ValidateNotNullOrEmpty()][String]$ListTitle,
+
+    [Parameter(ParameterSetName='SMAById',Mandatory=$true,HelpMessage='Please specify the Id of the list')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$true,HelpMessage='Please specify the Id of the list')]
+    [ValidateNotNullOrEmpty()][Guid]$ListId,
+
+    [Parameter(Mandatory=$true,HelpMessage='Please specify the name of the Field')]
+    [ValidateNotNullOrEmpty()][Alias('ColumnName')][String]$FieldName,
+
+    [Parameter(Mandatory=$true,HelpMessage='Please specify the display name of the Field')]
+    [ValidateNotNullOrEmpty()][Alias('ColumnDisplayName')][String]$FieldDisplayName,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify the name of the Field')]
+    [ValidateNotNullOrEmpty()][Alias('ColumnDescription')][String]$FieldDescription=$Null,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify if this Field is a required Field')]
+    [ValidateNotNullOrEmpty()][Boolean]$Required = $false,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify if this Field should enforce unique values')]
+    [ValidateNotNullOrEmpty()][Alias('unique')][Boolean]$EnforceUniqueValues = $false,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify the minimum value of this Field')]
+    [ValidateNotNullOrEmpty()][Alias('min')][Double]$Minimum,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify the maximum value of this Field')]
+    [ValidateNotNullOrEmpty()][Alias('max')][Double]$Maximum,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify the number of decimal places')]
+    [ValidateNotNullOrEmpty()][Int][Alias('decimal')]$DecimalPlaces,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify if this Field should be shown as percentage')]
+    [ValidateNotNullOrEmpty()][Boolean]$Percentage = $false,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify if this Field should be added to the default view')]
+    [ValidateNotNullOrEmpty()][Boolean]$AddToDefaultView = $true,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify if this Field should be added to the default view')]
+    [ValidateNotNullOrEmpty()][String]$DefaultValue,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify the if this field should be shown in the edit form')]
+    [ValidateNotNullOrEmpty()][Boolean]$ShowInEditForm = $true,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify the if this field should be shown in the new form')]
+    [ValidateNotNullOrEmpty()][Boolean]$ShowInNewForm = $true,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify the if this field should be shown in the display form')]
+    [ValidateNotNullOrEmpty()][Boolean]$ShowInDisplayForm = $true
+    )
+
+    If($SPConnection)
+	{
+		$SPCredential = New-SPCredential -SPConnection $SPConnection
+		$SiteUrl = $SPConnection.SharePointSiteURL
+	} else {
+		$SPCredential = New-SPCredential -Credential $Credential -IsSharePointOnlineSite $IsSharePointOnlineSite
+	}
+	#Make sure the SharePoint Client SDK Runtime DLLs are loaded
+    Write-Verbose "Loading SharePoint client SDK assemblies."
+	$ImportDLL = Import-SPClientSDK
+
+	#Bind to site collection
+    Write-Verbose "Bind to site collection"
+	$Context = New-Object Microsoft.SharePoint.Client.ClientContext($SiteURL)
+	$Context.Credentials = $SPCredential
+    $web = $Context.Web
+    
+    #Get the list
+    Write-Verbose "Getting the SharePoint list."
+    If ($ListTitle)
+    {
+        Write-Verbose "List Title specified: '$ListTitle'."
+        $List = $web.Lists.GetByTitle($ListTitle)
+    } elseif ($ListId) {
+        Write-Verbose "List Id specified: '$($ListId.ToString())'."
+        $List = $web.Lists.GetById($ListId)
+    } else {
+        Throw "Unable to retrieve the list."
+        Return
+    }
+    #Load the list
+    $Context.Load($List)
+    $Context.ExecuteQuery()
+    $strListId = $List.Id.ToString()
+
+    #Index
+    if ($EnforceUniqueValues -eq $true)
+    {
+        $bIndexed = $True
+    } else {
+        $bIndexed = $false
+    }
+        
+    Write-Verbose "List Id: '$strListId'."
+    #construct the field XML
+    $fieldXML = "<Field Type='Number' DisplayName='$FieldDisplayName' Name='$FieldName' StaticName='$FieldName' Description='$FieldDescription' Required='$($Required.ToString().ToUpper())' EnforceUniqueValues='$($EnforceUniqueValues.ToString().ToUpper())' Indexed='$($bIndexed.ToString().ToUpper())'"
+    if ($Minimum)
+    {
+        $fieldXML = "$fieldXML Min='$Minimum'"
+    }
+    if ($Maximum)
+    {
+        $fieldXML = "$fieldXML Max='$Maximum'"
+    }
+    if ($DecimalPlaces)
+    {
+        $fieldXML = "$fieldXML Decimals='$DecimalPlaces'"
+    }
+    if ($Percentage)
+    {
+        $fieldXML = "$fieldXML Percentage='TRUE'"
+    }
+    if ($DefaultValue)
+    {
+        $fieldXML = "$fieldXML><Default>$DefaultValue</Default></Field>"
+    } else {
+        $fieldXML = "$fieldXML />"
+    }
+    Write-Verbose "Field XML: `"$fieldXML`""
+    Write-Verbose "Adding the Field to the list"
+    
+    try
+    {
+        if ($AddToDefaultView)
+        {
+            Write-Verbose "The Field will be added to the default view."
+            $List.Fields.AddFieldAsXml($fieldXml,$true, [Microsoft.SharePoint.Client.AddFieldOptions]::AddFieldToDefaultView)
+        } else {
+            Write-Verbose "The Field will NOT be added to the default view."
+            $List.Fields.AddFieldAsXml($fieldXml,$false, [Microsoft.SharePoint.Client.AddFieldOptions]::DefaultValue)
+        }
+        $list.Update()
+        $Context.ExecuteQuery()
+
+        #Update the field
+        Write-Verbose "Field will show in display form: $ShowInDisplayForm"
+        Write-Verbose "Field will show in edit form: $ShowInEditForm"
+        Write-Verbose "Field will show in new form: $ShowInNewForm"
+
+        $Context.Load($List.Fields)
+        $Context.ExecuteQuery()
+        $ThisField = $List.Fields.GetByInternalNameOrTitle($FieldDisplayName)
+        $ThisField.SetShowInDisplayForm($ShowInDisplayForm)
+        $ThisField.SetShowInEditForm($ShowInEditForm)
+        $ThisField.SetShowInNewForm($ShowInNewForm)
+        $ThisField.Update()
+        $Context.ExecuteQuery()
+        $true
+    } catch {
+        Throw $_.exception.innerexception
+        $false
+    }
+}
+
+# .EXTERNALHELP SharePointSDK.psm1-Help.xml
+Function New-SPListChoiceField
+{
+    [OutputType('System.Boolean')]
+    [CmdletBinding()]
+	Param(
+    [Parameter(ParameterSetName='SMAByTitle',Mandatory=$True,HelpMessage='Please specify the SMA / Azure Autoamtion connection object')]
+    [Parameter(ParameterSetName='SMAById',Mandatory=$True,HelpMessage='Please specify the SMA / Azure Autoamtion connection object')]
+    [Object]$SPConnection,
+
+	[Parameter(ParameterSetName='IndividualByTitle',Mandatory=$True,HelpMessage='Please specify the SharePoint Site URL')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$True,HelpMessage='Please specify the SharePoint Site URL')]
+    [String]$SiteUrl,
+
+	[Parameter(ParameterSetName='IndividualByTitle',Mandatory=$true,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$true,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')]
+    [Alias('cred')]
+    [System.Management.Automation.PSCredential]
+    [System.Management.Automation.CredentialAttribute()]
+    $Credential,
+
+	[Parameter(ParameterSetName='IndividualByTitle',Mandatory=$True,HelpMessage='Please specify if the site is a SharePoint Online site')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$True,HelpMessage='Please specify if the site is a SharePoint Online site')]
+    [Alias('IsSPO')][boolean]$IsSharePointOnlineSite,
+
+    [Parameter(ParameterSetName='SMAByTitle',Mandatory=$true,HelpMessage='Please specify the title of the list')]
+    [Parameter(ParameterSetName='IndividualByTitle',Mandatory=$true,HelpMessage='Please specify the title of the list')]
+    [ValidateNotNullOrEmpty()][String]$ListTitle,
+
+    [Parameter(ParameterSetName='SMAById',Mandatory=$true,HelpMessage='Please specify the Id of the list')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$true,HelpMessage='Please specify the Id of the list')]
+    [ValidateNotNullOrEmpty()][Guid]$ListId,
+
+    [Parameter(Mandatory=$true,HelpMessage='Please specify the name of the Field')]
+    [ValidateNotNullOrEmpty()][Alias('ColumnName')][String]$FieldName,
+
+    [Parameter(Mandatory=$true,HelpMessage='Please specify the display name of the Field')]
+    [ValidateNotNullOrEmpty()][Alias('ColumnDisplayName')][String]$FieldDisplayName,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify the name of the Field')]
+    [ValidateNotNullOrEmpty()][Alias('ColumnDescription')][String]$FieldDescription=$Null,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify if this Field is a required Field')]
+    [ValidateNotNullOrEmpty()][Boolean]$Required = $false,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify if this Field should enforce unique values')]
+    [ValidateNotNullOrEmpty()][Alias('unique')][Boolean]$EnforceUniqueValues = $false,
+
+    [Parameter(Mandatory=$true,HelpMessage='Please specify the minimum value of this Field')]
+    [ValidateSet('DropDown', 'RadioButtons', 'CheckBoxes')][String]$Style,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify an array containing a list of choices')]
+    [ValidateNotNullOrEmpty()][String[]]$Choices,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify if this Field should be added to the default view')]
+    [ValidateScript({$Choices.Contains($_)})][String]$DefaultValue,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify if Fill-in choices are allowed')]
+    [ValidateNotNullOrEmpty()][Boolean]$FillInChoice=$false,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify if this Field should be added to the default view')]
+    [ValidateNotNullOrEmpty()][Boolean]$AddToDefaultView = $true,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify the if this field should be shown in the edit form')]
+    [ValidateNotNullOrEmpty()][Boolean]$ShowInEditForm = $true,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify the if this field should be shown in the new form')]
+    [ValidateNotNullOrEmpty()][Boolean]$ShowInNewForm = $true,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify the if this field should be shown in the display form')]
+    [ValidateNotNullOrEmpty()][Boolean]$ShowInDisplayForm = $true
+    )
+
+    If($SPConnection)
+	{
+		$SPCredential = New-SPCredential -SPConnection $SPConnection
+		$SiteUrl = $SPConnection.SharePointSiteURL
+	} else {
+		$SPCredential = New-SPCredential -Credential $Credential -IsSharePointOnlineSite $IsSharePointOnlineSite
+	}
+	#Make sure the SharePoint Client SDK Runtime DLLs are loaded
+    Write-Verbose "Loading SharePoint client SDK assemblies."
+	$ImportDLL = Import-SPClientSDK
+
+	#Bind to site collection
+    Write-Verbose "Bind to site collection"
+	$Context = New-Object Microsoft.SharePoint.Client.ClientContext($SiteURL)
+	$Context.Credentials = $SPCredential
+    $web = $Context.Web
+    
+    #Get the list
+    Write-Verbose "Getting the SharePoint list."
+    If ($ListTitle)
+    {
+        Write-Verbose "List Title specified: '$ListTitle'."
+        $List = $web.Lists.GetByTitle($ListTitle)
+    } elseif ($ListId) {
+        Write-Verbose "List Id specified: '$($ListId.ToString())'."
+        $List = $web.Lists.GetById($ListId)
+    } else {
+        Throw "Unable to retrieve the list."
+        Return
+    }
+    #Load the list
+    $Context.Load($List)
+    $Context.ExecuteQuery()
+    $strListId = $List.Id.ToString()
+
+    #Index
+    if ($EnforceUniqueValues -eq $true)
+    {
+        $bIndexed = $True
+    } else {
+        $bIndexed = $false
+    }
+        
+    Write-Verbose "List Id: '$strListId'."
+    #construct the field XML
+    $fieldXML = "<Field DisplayName='$FieldDisplayName' Name='$FieldName' StaticName='$FieldName' Description='$FieldDescription' Required='$($Required.ToString().ToUpper())' EnforceUniqueValues='$($EnforceUniqueValues.ToString().ToUpper())' Indexed='$($bIndexed.ToString().ToUpper())' FillInChoice='$($FillInChoice.ToString().ToUpper())'"
+    Switch ($Style.ToLower())
+    {
+        'dropdown'
+        {
+            $fieldXML = "$fieldXML Type='Choice' Format='Dropdown'"
+        }
+        'radiobuttons'
+        {
+            $fieldXML = "$fieldXML Type='Choice' Format='RadioButtons'"
+        }
+        'checkboxes'
+        {
+            $fieldXML = "$fieldXML Type='MultiChoice'"
+        }
+    }
+    $fieldXML = "$fieldXML>
+        <CHOICES>"
+    Foreach ($item in $Choices)
+    {
+        $fieldXML = "$fieldXML
+                <CHOICE>$item</CHOICE>"
+    }
+    $fieldXML = "$fieldXML
+        </CHOICES>
+    "
+    If ($DefaultValue)
+    {
+        $fieldXML = "$fieldXML
+            <Default>$DefaultValue</Default>
+          </Field>
+        "
+    } else {
+        $fieldXML = "$fieldXML</Field>
+        "
+    }
+    Write-Verbose "Field XML: `"$fieldXML`""
+    Write-Verbose "Adding the Field to the list"
+    
+    Try
+    {
+        if ($AddToDefaultView)
+        {
+            Write-Verbose "The Field will be added to the default view."
+            $List.Fields.AddFieldAsXml($fieldXml,$true, [Microsoft.SharePoint.Client.AddFieldOptions]::AddFieldToDefaultView)
+        } else {
+            Write-Verbose "The Field will NOT be added to the default view."
+            $List.Fields.AddFieldAsXml($fieldXml,$false, [Microsoft.SharePoint.Client.AddFieldOptions]::DefaultValue)
+        }
+        $list.Update()
+        $Context.ExecuteQuery()
+
+        #Update the field
+        Write-Verbose "Field '$FieldDisplayName' will show in display form: $ShowInDisplayForm"
+        Write-Verbose "Field '$FieldDisplayName' will show in edit form: $ShowInEditForm"
+        Write-Verbose "Field '$FieldDisplayName' will show in new form: $ShowInNewForm"
+
+        $Context.Load($List.Fields)
+        $Context.ExecuteQuery()
+        $ThisField = $List.Fields.GetByInternalNameOrTitle($FieldDisplayName)
+        $ThisField.SetShowInDisplayForm($ShowInDisplayForm)
+        $Context.ExecuteQuery()
+        $ThisField.SetShowInEditForm($ShowInEditForm)
+        $Context.ExecuteQuery()
+        $ThisField.SetShowInNewForm($ShowInNewForm)
+        $Context.ExecuteQuery()
+        $true
+    } catch {
+        Throw $_.exception.innerexception
+        $false
+    }
+}
+
+# .EXTERNALHELP SharePointSDK.psm1-Help.xml
+Function New-SPListDateTimeField
+{
+    [OutputType('System.Boolean')]
+    [CmdletBinding()]
+	Param(
+    [Parameter(ParameterSetName='SMAByTitle',Mandatory=$True,HelpMessage='Please specify the SMA / Azure Autoamtion connection object')]
+    [Parameter(ParameterSetName='SMAById',Mandatory=$True,HelpMessage='Please specify the SMA / Azure Autoamtion connection object')]
+    [Object]$SPConnection,
+
+	[Parameter(ParameterSetName='IndividualByTitle',Mandatory=$True,HelpMessage='Please specify the SharePoint Site URL')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$True,HelpMessage='Please specify the SharePoint Site URL')]
+    [String]$SiteUrl,
+
+	[Parameter(ParameterSetName='IndividualByTitle',Mandatory=$true,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$true,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')]
+    [Alias('cred')]
+    [System.Management.Automation.PSCredential]
+    [System.Management.Automation.CredentialAttribute()]
+    $Credential,
+
+	[Parameter(ParameterSetName='IndividualByTitle',Mandatory=$True,HelpMessage='Please specify if the site is a SharePoint Online site')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$True,HelpMessage='Please specify if the site is a SharePoint Online site')]
+    [Alias('IsSPO')][boolean]$IsSharePointOnlineSite,
+
+    [Parameter(ParameterSetName='SMAByTitle',Mandatory=$true,HelpMessage='Please specify the title of the list')]
+    [Parameter(ParameterSetName='IndividualByTitle',Mandatory=$true,HelpMessage='Please specify the title of the list')]
+    [ValidateNotNullOrEmpty()][String]$ListTitle,
+
+    [Parameter(ParameterSetName='SMAById',Mandatory=$true,HelpMessage='Please specify the Id of the list')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$true,HelpMessage='Please specify the Id of the list')]
+    [ValidateNotNullOrEmpty()][Guid]$ListId,
+
+    [Parameter(Mandatory=$true,HelpMessage='Please specify the name of the Field')]
+    [ValidateNotNullOrEmpty()][Alias('ColumnName')][String]$FieldName,
+
+    [Parameter(Mandatory=$true,HelpMessage='Please specify the display name of the Field')]
+    [ValidateNotNullOrEmpty()][Alias('ColumnDisplayName')][String]$FieldDisplayName,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify the name of the Field')]
+    [ValidateNotNullOrEmpty()][Alias('ColumnDescription')][String]$FieldDescription=$Null,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify if this Field is a required Field')]
+    [ValidateNotNullOrEmpty()][Boolean]$Required = $false,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify if this Field should enforce unique values')]
+    [ValidateNotNullOrEmpty()][Alias('unique')][Boolean]$EnforceUniqueValues = $false,
+
+    [Parameter(Mandatory=$true,HelpMessage='Please specify the Field Style ("DateTime" or "DateOnly")')]
+    [ValidateSet('DateTime', 'DateOnly')][String]$Style,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify if the Friendly display format should be used')]
+    [ValidateNotNullOrEmpty()][Boolean]$FriendlyDisplay = $false,
+
+    [Parameter(Mandatory=$false,HelpMessage="Please specify if use today's date as the default value.")]
+    [ValidateNotNullOrEmpty()][Boolean]$UseTodayAsDefaultValue = $false,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify if this Field should be added to the default view')]
+    [ValidateNotNullOrEmpty()][Boolean]$AddToDefaultView = $true,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify the if this field should be shown in the edit form')]
+    [ValidateNotNullOrEmpty()][Boolean]$ShowInEditForm = $true,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify the if this field should be shown in the new form')]
+    [ValidateNotNullOrEmpty()][Boolean]$ShowInNewForm = $true,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify the if this field should be shown in the display form')]
+    [ValidateNotNullOrEmpty()][Boolean]$ShowInDisplayForm = $true
+    )
+
+    If($SPConnection)
+	{
+		$SPCredential = New-SPCredential -SPConnection $SPConnection
+		$SiteUrl = $SPConnection.SharePointSiteURL
+	} else {
+		$SPCredential = New-SPCredential -Credential $Credential -IsSharePointOnlineSite $IsSharePointOnlineSite
+	}
+	#Make sure the SharePoint Client SDK Runtime DLLs are loaded
+    Write-Verbose "Loading SharePoint client SDK assemblies."
+	$ImportDLL = Import-SPClientSDK
+
+	#Bind to site collection
+    Write-Verbose "Bind to site collection"
+	$Context = New-Object Microsoft.SharePoint.Client.ClientContext($SiteURL)
+	$Context.Credentials = $SPCredential
+    $web = $Context.Web
+    
+    #Get the list
+    Write-Verbose "Getting the SharePoint list."
+    If ($ListTitle)
+    {
+        Write-Verbose "List Title specified: '$ListTitle'."
+        $List = $web.Lists.GetByTitle($ListTitle)
+    } elseif ($ListId) {
+        Write-Verbose "List Id specified: '$($ListId.ToString())'."
+        $List = $web.Lists.GetById($ListId)
+    } else {
+        Throw "Unable to retrieve the list."
+        Return
+    }
+    #Load the list
+    $Context.Load($List)
+    $Context.ExecuteQuery()
+    $strListId = $List.Id.ToString()
+
+    #Index
+    if ($EnforceUniqueValues -eq $true)
+    {
+        $bIndexed = $True
+    } else {
+        $bIndexed = $false
+    }
+        
+    Write-Verbose "List Id: '$strListId'."
+    #construct the field XML
+    $fieldXML = "<Field Type='DateTime' DisplayName='$FieldDisplayName' Name='$FieldName' StaticName='$FieldName' Description='$FieldDescription' Required='$($Required.ToString().ToUpper())' EnforceUniqueValues='$($EnforceUniqueValues.ToString().ToUpper())' Indexed='$($bIndexed.ToString().ToUpper())'"
+    Switch ($Style.ToLower())
+    {
+        'dateonly'
+        {
+            $fieldXML = "$fieldXML Format='DateOnly'"
+        }
+        'datetime'
+        {
+            $fieldXML = "$fieldXML Format='DateTime'"
+        }
+    }
+    #Friendly display format
+    If ($FriendlyDisplay -eq $True)
+    {
+        $fieldXML = "$fieldXML FriendlyDisplayFormat='Relative'>"
+    }
+
+    #Default value
+    If ($UseTodayAsDefaultValue -eq $true)
+    {
+        $fieldXML = "$fieldXML><Default>[today]</Default>"
+    }
+    $fieldXML = "$fieldXML </Field>"
+    Write-Verbose "Field XML: `"$fieldXML`""
+    Write-Verbose "Adding the Field to the list"
+    
+    try
+    {
+        if ($AddToDefaultView)
+        {
+            Write-Verbose "The Field will be added to the default view."
+            $List.Fields.AddFieldAsXml($fieldXml,$true, [Microsoft.SharePoint.Client.AddFieldOptions]::AddFieldToDefaultView)
+        } else {
+            Write-Verbose "The Field will NOT be added to the default view."
+            $List.Fields.AddFieldAsXml($fieldXml,$false, [Microsoft.SharePoint.Client.AddFieldOptions]::DefaultValue)
+        }
+        $list.Update()
+        $Context.ExecuteQuery()
+
+        #Update the field
+        Write-Verbose "Field will show in display form: $ShowInDisplayForm"
+        Write-Verbose "Field will show in edit form: $ShowInEditForm"
+        Write-Verbose "Field will show in new form: $ShowInNewForm"
+
+        $Context.Load($List.Fields)
+        $Context.ExecuteQuery()
+        $ThisField = $List.Fields.GetByInternalNameOrTitle($FieldDisplayName)
+        $ThisField.SetShowInDisplayForm($ShowInDisplayForm)
+        $ThisField.SetShowInEditForm($ShowInEditForm)
+        $ThisField.SetShowInNewForm($ShowInNewForm)
+        $ThisField.Update()
+        $Context.ExecuteQuery()
+        $true
+    } catch {
+        Throw $_.exception.innerexception
+        $false
+    }
+}
+
+# .EXTERNALHELP SharePointSDK.psm1-Help.xml
+Function New-SPListHyperLinkField
+{
+    [OutputType('System.Boolean')]
+    [CmdletBinding()]
+	Param(
+    [Parameter(ParameterSetName='SMAByTitle',Mandatory=$True,HelpMessage='Please specify the SMA / Azure Autoamtion connection object')]
+    [Parameter(ParameterSetName='SMAById',Mandatory=$True,HelpMessage='Please specify the SMA / Azure Autoamtion connection object')]
+    [Object]$SPConnection,
+
+	[Parameter(ParameterSetName='IndividualByTitle',Mandatory=$True,HelpMessage='Please specify the SharePoint Site URL')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$True,HelpMessage='Please specify the SharePoint Site URL')]
+    [String]$SiteUrl,
+
+	[Parameter(ParameterSetName='IndividualByTitle',Mandatory=$true,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$true,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')]
+    [Alias('cred')]
+    [System.Management.Automation.PSCredential]
+    [System.Management.Automation.CredentialAttribute()]
+    $Credential,
+
+	[Parameter(ParameterSetName='IndividualByTitle',Mandatory=$True,HelpMessage='Please specify if the site is a SharePoint Online site')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$True,HelpMessage='Please specify if the site is a SharePoint Online site')]
+    [Alias('IsSPO')][boolean]$IsSharePointOnlineSite,
+
+    [Parameter(ParameterSetName='SMAByTitle',Mandatory=$true,HelpMessage='Please specify the title of the list')]
+    [Parameter(ParameterSetName='IndividualByTitle',Mandatory=$true,HelpMessage='Please specify the title of the list')]
+    [ValidateNotNullOrEmpty()][String]$ListTitle,
+
+    [Parameter(ParameterSetName='SMAById',Mandatory=$true,HelpMessage='Please specify the Id of the list')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$true,HelpMessage='Please specify the Id of the list')]
+    [ValidateNotNullOrEmpty()][Guid]$ListId,
+
+    [Parameter(Mandatory=$true,HelpMessage='Please specify the name of the Field')]
+    [ValidateNotNullOrEmpty()][Alias('ColumnName')][String]$FieldName,
+
+    [Parameter(Mandatory=$true,HelpMessage='Please specify the display name of the Field')]
+    [ValidateNotNullOrEmpty()][Alias('ColumnDisplayName')][String]$FieldDisplayName,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify the name of the Field')]
+    [ValidateNotNullOrEmpty()][Alias('ColumnDescription')][String]$FieldDescription=$NUll,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify if this Field is a required Field')]
+    [ValidateNotNullOrEmpty()][Boolean]$Required = $false,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify the minimum value of this Field')]
+    [ValidateSet('Hyperlink', 'Picture')][String]$Style='Hyperlink',
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify if this Field should be added to the default view')]
+    [ValidateNotNullOrEmpty()][Boolean]$AddToDefaultView = $true,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify the if this field should be shown in the edit form')]
+    [ValidateNotNullOrEmpty()][Boolean]$ShowInEditForm = $true,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify the if this field should be shown in the new form')]
+    [ValidateNotNullOrEmpty()][Boolean]$ShowInNewForm = $true,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify the if this field should be shown in the display form')]
+    [ValidateNotNullOrEmpty()][Boolean]$ShowInDisplayForm = $true
+    )
+
+    If($SPConnection)
+	{
+		$SPCredential = New-SPCredential -SPConnection $SPConnection
+		$SiteUrl = $SPConnection.SharePointSiteURL
+	} else {
+		$SPCredential = New-SPCredential -Credential $Credential -IsSharePointOnlineSite $IsSharePointOnlineSite
+	}
+	#Make sure the SharePoint Client SDK Runtime DLLs are loaded
+    Write-Verbose "Loading SharePoint client SDK assemblies."
+	$ImportDLL = Import-SPClientSDK
+
+	#Bind to site collection
+    Write-Verbose "Bind to site collection"
+	$Context = New-Object Microsoft.SharePoint.Client.ClientContext($SiteURL)
+	$Context.Credentials = $SPCredential
+    $web = $Context.Web
+    
+    #Get the list
+    Write-Verbose "Getting the SharePoint list."
+    If ($ListTitle)
+    {
+        Write-Verbose "List Title specified: '$ListTitle'."
+        $List = $web.Lists.GetByTitle($ListTitle)
+    } elseif ($ListId) {
+        Write-Verbose "List Id specified: '$($ListId.ToString())'."
+        $List = $web.Lists.GetById($ListId)
+    } else {
+        Throw "Unable to retrieve the list."
+        Return
+    }
+    #Load the list
+    $Context.Load($List)
+    $Context.ExecuteQuery()
+    $strListId = $List.Id.ToString()
+    
+    Write-Verbose "List Id: '$strListId'."
+    #construct the field XML
+    $fieldXML = "<Field Type='URL' DisplayName='$FieldDisplayName' Name='$FieldName' StaticName='$FieldName' Description='$FieldDescription' Required='$($Required.ToString().ToUpper())'"
+    Switch ($Style.ToLower())
+    {
+        'hyperlink'
+        {
+            $fieldXML = "$fieldXML Format='Hyperlink'/>"
+        }
+        'picture'
+        {
+            $fieldXML = "$fieldXML Format='Image'/>"
+        }
+    }
+    Write-Verbose "Field XML: `"$fieldXML`""
+    Write-Verbose "Adding the Field to the list"
+    
+    try
+    {
+        if ($AddToDefaultView)
+        {
+            Write-Verbose "The Field will be added to the default view."
+            $List.Fields.AddFieldAsXml($fieldXml,$true, [Microsoft.SharePoint.Client.AddFieldOptions]::AddFieldToDefaultView)
+        } else {
+            Write-Verbose "The Field will NOT be added to the default view."
+            $List.Fields.AddFieldAsXml($fieldXml,$false, [Microsoft.SharePoint.Client.AddFieldOptions]::DefaultValue)
+        }
+        $list.Update()
+        $Context.ExecuteQuery()
+
+        #Update the field
+        Write-Verbose "Field will show in display form: $ShowInDisplayForm"
+        Write-Verbose "Field will show in edit form: $ShowInEditForm"
+        Write-Verbose "Field will show in new form: $ShowInNewForm"
+
+        $Context.Load($List.Fields)
+        $Context.ExecuteQuery()
+        $ThisField = $List.Fields.GetByInternalNameOrTitle($FieldDisplayName)
+        $ThisField.SetShowInDisplayForm($ShowInDisplayForm)
+        $ThisField.SetShowInEditForm($ShowInEditForm)
+        $ThisField.SetShowInNewForm($ShowInNewForm)
+        $ThisField.Update()
+        $Context.ExecuteQuery()
+        $true
+    } catch {
+        Throw $_.exception.innerexception
+        $false
+    }
+}
+
+# .EXTERNALHELP SharePointSDK.psm1-Help.xml
+Function New-SPListPersonField
+{
+    [OutputType('System.Boolean')]
+    [CmdletBinding()]
+	Param(
+    [Parameter(ParameterSetName='SMAByTitle',Mandatory=$True,HelpMessage='Please specify the SMA / Azure Autoamtion connection object')]
+    [Parameter(ParameterSetName='SMAById',Mandatory=$True,HelpMessage='Please specify the SMA / Azure Autoamtion connection object')]
+    [Object]$SPConnection,
+
+	[Parameter(ParameterSetName='IndividualByTitle',Mandatory=$True,HelpMessage='Please specify the SharePoint Site URL')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$True,HelpMessage='Please specify the SharePoint Site URL')]
+    [String]$SiteUrl,
+
+	[Parameter(ParameterSetName='IndividualByTitle',Mandatory=$true,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$true,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')]
+    [Alias('cred')]
+    [System.Management.Automation.PSCredential]
+    [System.Management.Automation.CredentialAttribute()]
+    $Credential,
+
+	[Parameter(ParameterSetName='IndividualByTitle',Mandatory=$True,HelpMessage='Please specify if the site is a SharePoint Online site')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$True,HelpMessage='Please specify if the site is a SharePoint Online site')]
+    [Alias('IsSPO')][boolean]$IsSharePointOnlineSite,
+
+    [Parameter(ParameterSetName='SMAByTitle',Mandatory=$true,HelpMessage='Please specify the title of the list')]
+    [Parameter(ParameterSetName='IndividualByTitle',Mandatory=$true,HelpMessage='Please specify the title of the list')]
+    [ValidateNotNullOrEmpty()][String]$ListTitle,
+
+    [Parameter(ParameterSetName='SMAById',Mandatory=$true,HelpMessage='Please specify the Id of the list')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$true,HelpMessage='Please specify the Id of the list')]
+    [ValidateNotNullOrEmpty()][Guid]$ListId,
+
+    [Parameter(Mandatory=$true,HelpMessage='Please specify the name of the Field')]
+    [ValidateNotNullOrEmpty()][Alias('ColumnName')][String]$FieldName,
+
+    [Parameter(Mandatory=$true,HelpMessage='Please specify the display name of the Field')]
+    [ValidateNotNullOrEmpty()][Alias('ColumnDisplayName')][String]$FieldDisplayName,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify the name of the Field')]
+    [ValidateNotNullOrEmpty()][Alias('ColumnDescription')][String]$FieldDescription=$Null,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify if this Field is a required Field')]
+    [ValidateNotNullOrEmpty()][Boolean]$Required = $false,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify if this Field should enforce unique values')]
+    [ValidateNotNullOrEmpty()][Alias('unique')][Boolean]$EnforceUniqueValues = $false,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify the User Selection Mode')]
+    [ValidateSet('PeopleAndGroups', 'PeopleOnly')][String]$UserSelectionMode='PeopleAndGroups',
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify the User Selection Mode')]
+    [Alias('UserSelectionScope','From')][Int]$FromGroupId=0,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify if selecting multiple users or groups is allowed')]
+    [ValidateScript({If ($EnforceUniqueValues -eq $true){$_ -ne $true} else {$true}})][Boolean]$AllowMultiple = $false,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify if this Field should be added to the default view')]
+    [ValidateNotNullOrEmpty()][Boolean]$AddToDefaultView = $true,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify the if this field should be shown in the edit form')]
+    [ValidateNotNullOrEmpty()][Boolean]$ShowInEditForm = $true,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify the if this field should be shown in the new form')]
+    [ValidateNotNullOrEmpty()][Boolean]$ShowInNewForm = $true,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify the if this field should be shown in the display form')]
+    [ValidateNotNullOrEmpty()][Boolean]$ShowInDisplayForm = $true
+    )
+
+    If($SPConnection)
+	{
+		$SPCredential = New-SPCredential -SPConnection $SPConnection
+		$SiteUrl = $SPConnection.SharePointSiteURL
+	} else {
+		$SPCredential = New-SPCredential -Credential $Credential -IsSharePointOnlineSite $IsSharePointOnlineSite
+	}
+	#Make sure the SharePoint Client SDK Runtime DLLs are loaded
+    Write-Verbose "Loading SharePoint client SDK assemblies."
+	$ImportDLL = Import-SPClientSDK
+
+	#Bind to site collection
+    Write-Verbose "Bind to site collection"
+	$Context = New-Object Microsoft.SharePoint.Client.ClientContext($SiteURL)
+	$Context.Credentials = $SPCredential
+    $web = $Context.Web
+    
+    #Get the list
+    Write-Verbose "Getting the SharePoint list."
+    If ($ListTitle)
+    {
+        Write-Verbose "List Title specified: '$ListTitle'."
+        $List = $web.Lists.GetByTitle($ListTitle)
+    } elseif ($ListId) {
+        Write-Verbose "List Id specified: '$($ListId.ToString())'."
+        $List = $web.Lists.GetById($ListId)
+    } else {
+        Throw "Unable to retrieve the list."
+        Return
+    }
+    #Load the list
+    $Context.Load($List)
+    $Context.ExecuteQuery()
+    $strListId = $List.Id.ToString()
+
+    #Index
+    if ($EnforceUniqueValues -eq $true)
+    {
+        $bIndexed = $True
+    } else {
+        $bIndexed = $false
+    }
+        
+    Write-Verbose "List Id: '$strListId'."
+    #construct the field XML
+    $fieldXML = "<Field DisplayName='$FieldDisplayName' Name='$FieldName' StaticName='$FieldName' Description='$FieldDescription' Required='$($Required.ToString().ToUpper())' EnforceUniqueValues='$($EnforceUniqueValues.ToString().ToUpper())' Indexed='$($bIndexed.ToString().ToUpper())' UserSelectionScope='$FromGroupId' Mult='$($AllowMultiple.ToString().ToUpper())'"
+    If ($AllowMultiple -eq $true)
+    {
+        $fieldXML = "$fieldXML Type='UserMulti'"
+    } else {
+        $fieldXML = "$fieldXML Type='User'"
+    }
+
+    Switch ($UserSelectionMode.ToLower())
+    {
+        'peopleandgroups'
+        {
+            $fieldXML = "$fieldXML UserSelectionMode='PeopleAndGroups'/>"
+        }
+        'peopleonly'
+        {
+            $fieldXML = "$fieldXML UserSelectionMode='PeopleOnly'/>"
+        }
+    }
+    Write-Verbose "Field XML: `"$fieldXML`""
+    Write-Verbose "Adding the Field to the list"
+    
+    try
+    {
+        if ($AddToDefaultView)
+        {
+            Write-Verbose "The Field will be added to the default view."
+            $List.Fields.AddFieldAsXml($fieldXml,$true, [Microsoft.SharePoint.Client.AddFieldOptions]::AddFieldToDefaultView)
+        } else {
+            Write-Verbose "The Field will NOT be added to the default view."
+            $List.Fields.AddFieldAsXml($fieldXml,$false, [Microsoft.SharePoint.Client.AddFieldOptions]::DefaultValue)
+        }
+        $list.Update()
+        $Context.ExecuteQuery()
+
+        #Update the field
+        Write-Verbose "Field will show in display form: $ShowInDisplayForm"
+        Write-Verbose "Field will show in edit form: $ShowInEditForm"
+        Write-Verbose "Field will show in new form: $ShowInNewForm"
+
+        $Context.Load($List.Fields)
+        $Context.ExecuteQuery()
+        $ThisField = $List.Fields.GetByInternalNameOrTitle($FieldDisplayName)
+        $ThisField.SetShowInDisplayForm($ShowInDisplayForm)
+        $ThisField.SetShowInEditForm($ShowInEditForm)
+        $ThisField.SetShowInNewForm($ShowInNewForm)
+        $ThisField.Update()
+        $Context.ExecuteQuery()
+        $true
+    } catch {
+        Throw $_.exception.innerexception
+        $false
+    }
+}
+
+# .EXTERNALHELP SharePointSDK.psm1-Help.xml
+Function Remove-SPListField
+{
+    [OutputType('System.Boolean')]
+    [CmdletBinding()]
+	Param(
+    [Parameter(ParameterSetName='SMAByTitle',Mandatory=$True,HelpMessage='Please specify the SMA / Azure Autoamtion connection object')]
+    [Parameter(ParameterSetName='SMAById',Mandatory=$True,HelpMessage='Please specify the SMA / Azure Autoamtion connection object')]
+    [Object]$SPConnection,
+
+	[Parameter(ParameterSetName='IndividualByTitle',Mandatory=$True,HelpMessage='Please specify the SharePoint Site URL')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$True,HelpMessage='Please specify the SharePoint Site URL')]
+    [String]$SiteUrl,
+
+	[Parameter(ParameterSetName='IndividualByTitle',Mandatory=$true,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$true,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')]
+    [Alias('cred')]
+    [System.Management.Automation.PSCredential]
+    [System.Management.Automation.CredentialAttribute()]
+    $Credential,
+
+	[Parameter(ParameterSetName='IndividualByTitle',Mandatory=$True,HelpMessage='Please specify if the site is a SharePoint Online site')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$True,HelpMessage='Please specify if the site is a SharePoint Online site')]
+    [Alias('IsSPO')][boolean]$IsSharePointOnlineSite,
+
+    [Parameter(ParameterSetName='SMAByTitle',Mandatory=$true,HelpMessage='Please specify the title of the list')]
+    [Parameter(ParameterSetName='IndividualByTitle',Mandatory=$true,HelpMessage='Please specify the title of the list')]
+    [ValidateNotNullOrEmpty()][String]$ListTitle,
+
+    [Parameter(ParameterSetName='SMAById',Mandatory=$true,HelpMessage='Please specify the Id of the list')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$true,HelpMessage='Please specify the Id of the list')]
+    [ValidateNotNullOrEmpty()][Guid]$ListId,
+
+    [Parameter(Mandatory=$true,HelpMessage='Please specify the Field name')]
+    [ValidateNotNullOrEmpty()][Alias('ColumnName','ColumnTitle','FieldTitle')][String]$FieldName
+    )
+
+    If($SPConnection)
+	{
+		$SPCredential = New-SPCredential -SPConnection $SPConnection
+		$SiteUrl = $SPConnection.SharePointSiteURL
+	} else {
+		$SPCredential = New-SPCredential -Credential $Credential -IsSharePointOnlineSite $IsSharePointOnlineSite
+	}
+	#Make sure the SharePoint Client SDK Runtime DLLs are loaded
+    Write-Verbose "Loading SharePoint client SDK assemblies."
+	$ImportDLL = Import-SPClientSDK
+
+	#Bind to site collection
+    Write-Verbose "Bind to site collection"
+	$Context = New-Object Microsoft.SharePoint.Client.ClientContext($SiteURL)
+	$Context.Credentials = $SPCredential
+    $web = $Context.Web
+    
+    #Get the list
+    Write-Verbose "Getting the SharePoint list."
+    If ($ListTitle)
+    {
+        Write-Verbose "List Title specified: '$ListTitle'."
+        $List = $web.Lists.GetByTitle($ListTitle)
+    } elseif ($ListId) {
+        Write-Verbose "List Id specified: '$($ListId.ToString())'."
+        $List = $web.Lists.GetById($ListId)
+    } else {
+        Throw "Unable to retrieve the list."
+        Return
+    }
+
+    #Get the field
+    Write-Verbose "Deleting the Field"
+    try
+    {
+        $Field = $list.Fields.GetByInternalNameOrTitle($FieldName)
+        $Field.DeleteObject()
+        $context.ExecuteQuery()
+        $true
+    } catch {
+        throw $_.Exception.InnerException
+        $false
+    }
+}
+
+# .EXTERNALHELP SharePointSDK.psm1-Help.xml
+Function Update-SPListField
+{
+    [OutputType('System.Boolean')]
+    [CmdletBinding()]
+	Param(
+    [Parameter(ParameterSetName='SMAByTitle',Mandatory=$True,HelpMessage='Please specify the SMA / Azure Autoamtion connection object')]
+    [Parameter(ParameterSetName='SMAById',Mandatory=$True,HelpMessage='Please specify the SMA / Azure Autoamtion connection object')]
+    [Object]$SPConnection,
+
+	[Parameter(ParameterSetName='IndividualByTitle',Mandatory=$True,HelpMessage='Please specify the SharePoint Site URL')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$True,HelpMessage='Please specify the SharePoint Site URL')]
+    [String]$SiteUrl,
+
+	[Parameter(ParameterSetName='IndividualByTitle',Mandatory=$true,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$true,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')]
+    [Alias('cred')]
+    [System.Management.Automation.PSCredential]
+    [System.Management.Automation.CredentialAttribute()]
+    $Credential,
+
+	[Parameter(ParameterSetName='IndividualByTitle',Mandatory=$True,HelpMessage='Please specify if the site is a SharePoint Online site')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$True,HelpMessage='Please specify if the site is a SharePoint Online site')]
+    [Alias('IsSPO')][boolean]$IsSharePointOnlineSite,
+
+    [Parameter(ParameterSetName='SMAByTitle',Mandatory=$true,HelpMessage='Please specify the title of the list')]
+    [Parameter(ParameterSetName='IndividualByTitle',Mandatory=$true,HelpMessage='Please specify the title of the list')]
+    [ValidateNotNullOrEmpty()][String]$ListTitle,
+
+    [Parameter(ParameterSetName='SMAById',Mandatory=$true,HelpMessage='Please specify the Id of the list')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$true,HelpMessage='Please specify the Id of the list')]
+    [ValidateNotNullOrEmpty()][Guid]$ListId,
+
+    [Parameter(Mandatory=$true,HelpMessage='Please specify the Field name')]
+    [ValidateNotNullOrEmpty()][Alias('ColumnName','ColumnTitle','FieldTitle')][String]$FieldName,
+
+    [Parameter(Mandatory=$true,HelpMessage='Please specify the updated field schema XML')]
+    [ValidateNotNullOrEmpty()][Alias('schema')][String]$SchemaXML
+    )
+
+    If($SPConnection)
+	{
+		$SPCredential = New-SPCredential -SPConnection $SPConnection
+		$SiteUrl = $SPConnection.SharePointSiteURL
+	} else {
+		$SPCredential = New-SPCredential -Credential $Credential -IsSharePointOnlineSite $IsSharePointOnlineSite
+	}
+	#Make sure the SharePoint Client SDK Runtime DLLs are loaded
+    Write-Verbose "Loading SharePoint client SDK assemblies."
+	$ImportDLL = Import-SPClientSDK
+
+	#Bind to site collection
+    Write-Verbose "Bind to site collection"
+	$Context = New-Object Microsoft.SharePoint.Client.ClientContext($SiteURL)
+	$Context.Credentials = $SPCredential
+    $web = $Context.Web
+    
+    #Get the list
+    Write-Verbose "Getting the SharePoint list."
+    If ($ListTitle)
+    {
+        Write-Verbose "List Title specified: '$ListTitle'."
+        $List = $web.Lists.GetByTitle($ListTitle)
+    } elseif ($ListId) {
+        Write-Verbose "List Id specified: '$($ListId.ToString())'."
+        $List = $web.Lists.GetById($ListId)
+    } else {
+        Throw "Unable to retrieve the list."
+        Return $false
+    }
+
+    try
+    {
+        $Context.Load($List)
+        $Context.Load($List.Fields)
+        $Context.ExecuteQuery()
+    } Catch {
+        throw $_.Exception.InnerException
+        return $false
+    }
+
+    #Get the field
+    Write-Verbose "Updating the Field '$FieldName'"
+    try
+    {
+        Write-Verbose "New Schema XML: '$SchemaXML'"
+        $Field = $List.Fields.GetByInternalNameOrTitle($FieldName)
+        $Context.Load($Field)
+        $Context.ExecuteQuery()
+        $Field.SchemaXml = $SchemaXML
+        $Field.Update()
+        $context.ExecuteQuery()
+        $true
+    } catch {
+        throw $_.Exception.InnerException
+        $false
+    }
+}
+
+# .EXTERNALHELP SharePointSDK.psm1-Help.xml
+Function Set-SPListFieldVisibility
+{
+    [OutputType('System.Boolean')]
+    [CmdletBinding()]
+	Param(
+    [Parameter(ParameterSetName='SMAByTitle',Mandatory=$True,HelpMessage='Please specify the SMA / Azure Autoamtion connection object')]
+    [Parameter(ParameterSetName='SMAById',Mandatory=$True,HelpMessage='Please specify the SMA / Azure Autoamtion connection object')]
+    [Object]$SPConnection,
+
+	[Parameter(ParameterSetName='IndividualByTitle',Mandatory=$True,HelpMessage='Please specify the SharePoint Site URL')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$True,HelpMessage='Please specify the SharePoint Site URL')]
+    [String]$SiteUrl,
+
+	[Parameter(ParameterSetName='IndividualByTitle',Mandatory=$true,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$true,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')]
+    [Alias('cred')]
+    [System.Management.Automation.PSCredential]
+    [System.Management.Automation.CredentialAttribute()]
+    $Credential,
+
+	[Parameter(ParameterSetName='IndividualByTitle',Mandatory=$True,HelpMessage='Please specify if the site is a SharePoint Online site')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$True,HelpMessage='Please specify if the site is a SharePoint Online site')]
+    [Alias('IsSPO')][boolean]$IsSharePointOnlineSite,
+
+    [Parameter(ParameterSetName='SMAByTitle',Mandatory=$true,HelpMessage='Please specify the title of the list')]
+    [Parameter(ParameterSetName='IndividualByTitle',Mandatory=$true,HelpMessage='Please specify the title of the list')]
+    [ValidateNotNullOrEmpty()][String]$ListTitle,
+
+    [Parameter(ParameterSetName='SMAById',Mandatory=$true,HelpMessage='Please specify the Id of the list')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$true,HelpMessage='Please specify the Id of the list')]
+    [ValidateNotNullOrEmpty()][Guid]$ListId,
+
+    [Parameter(Mandatory=$true,HelpMessage='Please specify the Field name')]
+    [ValidateNotNullOrEmpty()][Alias('ColumnName','ColumnTitle','FieldTitle')][String]$FieldName,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify the if this field should be shown in the edit form')]
+    [Boolean]$ShowInEditForm,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify the if this field should be shown in the new form')]
+    [Boolean]$ShowInNewForm,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify the if this field should be shown in the display form')]
+    [Boolean]$ShowInDisplayForm
+    )
+
+    #Retrieve field visibility parameters from $PSBoundParameters
+    Write-Verbose "Determining field visibility configurations."
+    If (!($PSBoundParameters.ContainsKey("ShowInEditForm")) -and !($PSBoundParameters.ContainsKey("ShowInNewForm")) -and !($PSBoundParameters.ContainsKey("ShowInDisplayForm")))
+    {
+        Throw "Please specify at least one of the following parameters: 'ShowInEditForm', 'ShowInNewForm', 'ShowInDisplayForm'"
+        Return $false
+    } else {
+        #Get the value for 'ShowInEditForm'
+        if ($PSBoundParameters.ContainsKey("ShowInEditForm"))
+        {
+            $bShowInEditForm = $PSBoundParameters.ShowInEditForm
+        }
+
+        #Get the value for 'ShowInNewForm'
+        if ($PSBoundParameters.ContainsKey("ShowInNewForm"))
+        {
+            $bShowInNewForm = $PSBoundParameters.ShowInNewForm
+        }
+
+        #Get the value for 'ShowInDisplayForm'
+        if ($PSBoundParameters.ContainsKey("ShowInDisplayForm"))
+        {
+            $bShowInDisplayForm = $PSBoundParameters.ShowInDisplayForm
+        }
+    }
+
+    If($SPConnection)
+	{
+		$SPCredential = New-SPCredential -SPConnection $SPConnection
+		$SiteUrl = $SPConnection.SharePointSiteURL
+	} else {
+		$SPCredential = New-SPCredential -Credential $Credential -IsSharePointOnlineSite $IsSharePointOnlineSite
+	}
+	#Make sure the SharePoint Client SDK Runtime DLLs are loaded
+    Write-Verbose "Loading SharePoint client SDK assemblies."
+	$ImportDLL = Import-SPClientSDK
+
+	#Bind to site collection
+    Write-Verbose "Bind to site collection"
+	$Context = New-Object Microsoft.SharePoint.Client.ClientContext($SiteURL)
+	$Context.Credentials = $SPCredential
+    $web = $Context.Web
+    
+    #Get the list
+    Write-Verbose "Getting the SharePoint list."
+    If ($ListTitle)
+    {
+        Write-Verbose "List Title specified: '$ListTitle'."
+        $List = $web.Lists.GetByTitle($ListTitle)
+    } elseif ($ListId) {
+        Write-Verbose "List Id specified: '$($ListId.ToString())'."
+        $List = $web.Lists.GetById($ListId)
+    } else {
+        Throw "Unable to retrieve the list."
+        Return $false
+    }
+
+    try
+    {
+        $Context.Load($List)
+        $Context.Load($List.Fields)
+        $Context.ExecuteQuery()
+    } Catch {
+        throw $_.Exception.InnerException
+        return $false
+    }
+
+    #Get the field
+    Write-Verbose "Updating the Field '$FieldName'"
+    try
+    {
+        $Field = $List.Fields.GetByInternalNameOrTitle($FieldName)
+        #ShowInEditForm
+        If ($bShowInEditForm -ne $null)
+        {
+            Write-Verbose "Setting ShowInEditForm to '$bShowInEditForm'"
+            $Field.SetShowInEditForm($bShowInEditForm)
+            $Context.ExecuteQuery()
+        }
+
+        #ShowInNewForm
+        If ($bShowInEditForm -ne $null)
+        {
+            Write-Verbose "Setting ShowInNewForm to '$ShowInNewForm'"
+            $Field.SetShowInNewForm($bShowInNewForm)
+            $Context.ExecuteQuery()
+        }
+
+        #ShowInDisplayForm
+        If ($ShowInDisplayForm -ne $null)
+        {
+            Write-Verbose "Setting ShowInDisplayForm to '$bShowInDisplayForm'"
+            $Field.SetShowInDisplayForm($bShowInDisplayForm)
+            $Context.ExecuteQuery()
+        }
+        $true
+    } catch {
+        throw $_.Exception.InnerException
+        $false
+    }
+}
+
+# .EXTERNALHELP SharePointSDK.psm1-Help.xml
+Function Get-SPGroup
+{
+    [OutputType('Microsoft.SharePoint.Client.GroupCollection')]
+    [OutputType('Microsoft.SharePoint.Client.Group')]
+    [CmdletBinding()]
+	Param(
+    [Parameter(ParameterSetName='SMAConnection',Mandatory=$True,HelpMessage='Please specify the SMA / Azure Autoamtion connection object')]
+    [Object]$SPConnection,
+
+	[Parameter(ParameterSetName='IndividualParameters',Mandatory=$True,HelpMessage='Please specify the SharePoint Site URL')]
+    [String]$SiteUrl,
+
+	[Parameter(ParameterSetName='IndividualParameters',Mandatory=$true,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')]
+    [Alias('cred')]
+    [System.Management.Automation.PSCredential]
+    [System.Management.Automation.CredentialAttribute()]
+    $Credential,
+
+	[Parameter(ParameterSetName='IndividualParameters',Mandatory=$True,HelpMessage='Please specify if the site is a SharePoint Online site')]
+    [Alias('IsSPO')][boolean]$IsSharePointOnlineSite,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify the title of the group')]
+    [ValidateNotNullOrEmpty()][String]$GroupTitle=$null,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify the Id of the group')]
+    [ValidateNotNullOrEmpty()][Int]$GroupId=$Null
+    )
+
+    #Work out if $GroupTitle and $GroupId contains values
+    #GroupTitle
+    If ($PSBoundParameters.ContainsKey("GroupTitle"))
+    {
+        $GroupTitle = $PSBoundParameters.GroupTitle
+    } else {
+        Remove-Variable GroupTitle
+    }
+    #GroupId
+    If ($PSBoundParameters.ContainsKey("GroupId"))
+    {
+        $GroupId = $PSBoundParameters.GroupId
+    } else {
+        Remove-Variable GroupId
+    }
+
+    If($SPConnection)
+	{
+		$SPCredential = New-SPCredential -SPConnection $SPConnection
+		$SiteUrl = $SPConnection.SharePointSiteURL
+	} else {
+		$SPCredential = New-SPCredential -Credential $Credential -IsSharePointOnlineSite $IsSharePointOnlineSite
+	}
+	#Make sure the SharePoint Client SDK Runtime DLLs are loaded
+    Write-Verbose "Loading SharePoint client SDK assemblies."
+	$ImportDLL = Import-SPClientSDK
+
+	#Bind to site collection
+    Write-Verbose "Bind to site collection"
+	$Context = New-Object Microsoft.SharePoint.Client.ClientContext($SiteURL)
+	$Context.Credentials = $SPCredential
+    $web = $Context.Web
+    
+    #Get the list
+    Write-Verbose "Getting the SharePoint Group."
+    Try{
+        $Groups = $web.SiteGroups
+        $Context.Load($Groups)
+        $Context.ExecuteQuery()
+        If ($GroupTitle)
+        {
+            Write-Verbose "Group Title specified: '$GroupTitle'."
+            $Group = $Groups.GetByName($GroupTitle)
+            $Context.Load($Group)
+            $Context.ExecuteQuery()
+            $Context.Load($Group.Users)
+            $Context.ExecuteQuery()
+            $Result = $Group
+        } elseif ($GroupId) {
+            Write-Verbose "Group Id specified: '$GroupId'."
+            $Group = $Groups.GetById($GroupId)
+            $Context.Load($Group)
+            $Context.ExecuteQuery()
+            $Context.Load($Group.Users)
+            $Context.ExecuteQuery()
+            $Result = $Group
+        } else {
+            Write-Verbose "Get all groups"
+            Foreach ($Group in $Groups)
+            {
+                $Context.Load($Group)
+                $Context.ExecuteQuery()
+                $Context.Load($Group.Users)
+                $Context.ExecuteQuery()
+            }
+            $Result = $Groups
+        }
+    } Catch {
+        throw $_.exception.innerexception
+        return
+    }
+    Return $Result
+}
+
+# .EXTERNALHELP SharePointSDK.psm1-Help.xml
+Function New-SPGroup
+{
+    [OutputType('System.Boolean')]
+    [CmdletBinding()]
+	Param(
+        [Parameter(ParameterSetName='SMAConnection',Mandatory=$True,HelpMessage='Please specify the SMA / Azure Autoamtion connection object')]
+        [Object]$SPConnection,
+
+	    [Parameter(ParameterSetName='IndividualParameters',Mandatory=$True,HelpMessage='Please specify the SharePoint Site URL')]
+        [String]$SiteUrl,
+
+	    [Parameter(ParameterSetName='IndividualParameters',Mandatory=$true,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')]
+        [Alias('cred')]
+        [System.Management.Automation.PSCredential]
+        [System.Management.Automation.CredentialAttribute()]
+        $Credential,
+
+	    [Parameter(ParameterSetName='IndividualParameters',Mandatory=$True,HelpMessage='Please specify if the site is a SharePoint Online site')]
+        [Alias('IsSPO')][boolean]$IsSharePointOnlineSite,
+
+        [Parameter(Mandatory=$true,HelpMessage='Please specify the title of the group')]
+        [ValidateNotNullOrEmpty()][String]$GroupTitle,
+
+        [Parameter(Mandatory=$false,HelpMessage='Please specify the description of the group')]
+        [ValidateNotNullOrEmpty()][String]$GroupDescription=$Null,
+
+        [Parameter(Mandatory=$false,HelpMessage='Please specify the title of the group')]
+        [ValidateNotNullOrEmpty()][String[]]$GroupRoles
+    )
+    If($SPConnection)
+	{
+		$SPCredential = New-SPCredential -SPConnection $SPConnection
+		$SiteUrl = $SPConnection.SharePointSiteURL
+	} else {
+		$SPCredential = New-SPCredential -Credential $Credential -IsSharePointOnlineSite $IsSharePointOnlineSite
+	}
+	#Make sure the SharePoint Client SDK Runtime DLLs are loaded
+    Write-Verbose "Loading SharePoint client SDK assemblies."
+	$ImportDLL = Import-SPClientSDK
+
+	#Bind to site collection
+    Write-Verbose "Bind to site collection"
+	$Context = New-Object Microsoft.SharePoint.Client.ClientContext($SiteURL)
+	$Context.Credentials = $SPCredential
+    $web = $Context.Web
+
+    #Validate each group roles before continuing
+    if ($GroupRoles.count -gt 0)
+    {
+        Write-Verbose "Validating the group roles specified."
+        $bValidRoles = $True
+        Foreach ($role in $GroupRoles)
+        {
+            If ([Microsoft.SharePoint.Client.RoleType]::$role)
+            {
+                if ([Microsoft.SharePoint.Client.RoleType]::$role -eq 'None')
+                {
+                    Write-Error "There is no need to specify the role 'None'. This role will be automatically assigned if no other roles have been specified."
+                    $bValidRoles = $false
+                } else {
+                    Write-Verbose "The group role '$Role' is a valid role."
+                }
+            } else {
+                Write-Error "The group role specified: '$Role' is not a valid role."
+                $bValidRoles = $false
+            }
+        }
+        If ($bValidRoles -eq $false)
+        {
+            Throw "Group roles validation failed. unable to continue."
+            Return $false
+        }
+    }
+
+    #start creating the group
+    Write-Verbose "Start creating the SharePoint group."
+    try
+    {
+        $GroupCreationInfo = New-Object Microsoft.SharePoint.Client.GroupCreationInformation
+        $GroupCreationInfo.Title = $GroupTitle
+        $GroupCreationInfo.Description = $GroupDescription
+        $Group = $web.SiteGroups.Add($GroupCreationInfo)
+        $colRoleDefBinding = New-object Microsoft.SharePoint.Client.RoleDefinitionBindingCollection($Context)
+        $Context.Load($Group)
+        $Context.ExecuteQuery()
+        If ($GroupRoles.count -gt 0)
+        {
+            Foreach ($Role in $GroupRoles)
+            {
+                Write-Verbose "Assigning role '$Role' to group '$GroupTitle'."
+                $RoleDefinition = $web.RoleDefinitions.GetByType([Microsoft.SharePoint.Client.RoleType]::$Role)
+                $colRoleDefBinding.add($RoleDefinition)
+                $Context.Load($RoleDefinition)
+            }
+            $AssignRole = $web.RoleAssignments.Add($Group, $colRoleDefBinding)
+            $Context.ExecuteQuery()
+        } else {
+            Write-Verbose "No roles are assigned to the group '$GroupTitle'."
+        }
+        $Context.ExecuteQuery()
+        return $true
+    } catch {
+        Throw $_.Exception.InnerException
+        return $false
+    }
+}
+
+# .EXTERNALHELP SharePointSDK.psm1-Help.xml
+Function New-SPGroupMember
+{
+    [OutputType('System.Boolean')]
+    [CmdletBinding()]
+	Param(
+    [Parameter(ParameterSetName='SMAByTitle',Mandatory=$True,HelpMessage='Please specify the SMA / Azure Autoamtion connection object')]
+    [Parameter(ParameterSetName='SMAById',Mandatory=$True,HelpMessage='Please specify the SMA / Azure Autoamtion connection object')]
+    [Object]$SPConnection,
+
+	[Parameter(ParameterSetName='IndividualByTitle',Mandatory=$True,HelpMessage='Please specify the SharePoint Site URL')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$True,HelpMessage='Please specify the SharePoint Site URL')]
+    [String]$SiteUrl,
+
+	[Parameter(ParameterSetName='IndividualByTitle',Mandatory=$true,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$true,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')]
+    [Alias('cred')]
+    [System.Management.Automation.PSCredential]
+    [System.Management.Automation.CredentialAttribute()]
+    $Credential,
+
+	[Parameter(ParameterSetName='IndividualByTitle',Mandatory=$True,HelpMessage='Please specify if the site is a SharePoint Online site')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$True,HelpMessage='Please specify if the site is a SharePoint Online site')]
+    [Alias('IsSPO')][boolean]$IsSharePointOnlineSite,
+
+    [Parameter(ParameterSetName='SMAByTitle',Mandatory=$true,HelpMessage='Please specify the title of the Group')]
+    [Parameter(ParameterSetName='IndividualByTitle',Mandatory=$true,HelpMessage='Please specify the title of the Group')]
+    [ValidateNotNullOrEmpty()][String]$GroupTitle,
+
+    [Parameter(ParameterSetName='SMAById',Mandatory=$true,HelpMessage='Please specify the Id of the Group')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$true,HelpMessage='Please specify the Id of the Group')]
+    [ValidateNotNullOrEmpty()][Int]$GroupId,
+
+    [Parameter(Mandatory=$true,HelpMessage='Please specify user name of the user to be added to the group')]
+    [ValidateNotNullOrEmpty()][Alias('New')][String]$NewMemberUserName
+    )
+
+    If($SPConnection)
+	{
+		$SPCredential = New-SPCredential -SPConnection $SPConnection
+		$SiteUrl = $SPConnection.SharePointSiteURL
+	} else {
+		$SPCredential = New-SPCredential -Credential $Credential -IsSharePointOnlineSite $IsSharePointOnlineSite
+	}
+	#Make sure the SharePoint Client SDK Runtime DLLs are loaded
+    Write-Verbose "Loading SharePoint client SDK assemblies."
+	$ImportDLL = Import-SPClientSDK
+
+	#Bind to site collection
+    Write-Verbose "Bind to site collection"
+	$Context = New-Object Microsoft.SharePoint.Client.ClientContext($SiteURL)
+	$Context.Credentials = $SPCredential
+    $web = $Context.Web
+    
+    #Get the group
+    Write-Verbose "Getting the SharePoint group."
+    Try{
+        $Groups = $web.SiteGroups
+        $Context.Load($Groups)
+        $Context.ExecuteQuery()
+        If ($GroupTitle)
+        {
+            Write-Verbose "Group Title specified: '$GroupTitle'."
+            $Group = $Groups.GetByName($GroupTitle)
+        } elseif ($GroupId) {
+            Write-Verbose "Group Id specified: '$GroupId'."
+            $Group = $Groups.GetById($GroupId)
+        } else {
+            Throw "Unable to retrieve the group."
+            Return $false
+        }
+        $Context.Load($Group)
+        $Context.ExecuteQuery()
+        $Context.Load($Group.Users)
+        $Context.ExecuteQuery()
+    } Catch {
+        throw $_.exception.innerexception
+        return $false
+    }
+    Write-Verbose "adding the new user '$NewMemberUserName' to the group"
+    try
+    {
+        $NewMember = $web.EnsureUser($NewMemberUserName)
+        $context.Load($NewMember)
+        $AddUser = $Group.Users.AddUser($NewMember)
+        $Context.Load($AddUser)
+        $Context.ExecuteQuery()
+        $true
+    } catch {
+        throw $_.Exception.InnerException
+        $false
+    }
+}
+
+# .EXTERNALHELP SharePointSDK.psm1-Help.xml
+Function Remove-SPGroupMember
+{
+    [OutputType('System.Boolean')]
+    [CmdletBinding()]
+	Param(
+    [Parameter(ParameterSetName='SMAByTitle',Mandatory=$True,HelpMessage='Please specify the SMA / Azure Autoamtion connection object')]
+    [Parameter(ParameterSetName='SMAById',Mandatory=$True,HelpMessage='Please specify the SMA / Azure Autoamtion connection object')]
+    [Object]$SPConnection,
+
+	[Parameter(ParameterSetName='IndividualByTitle',Mandatory=$True,HelpMessage='Please specify the SharePoint Site URL')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$True,HelpMessage='Please specify the SharePoint Site URL')]
+    [String]$SiteUrl,
+
+	[Parameter(ParameterSetName='IndividualByTitle',Mandatory=$true,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$true,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')]
+    [Alias('cred')]
+    [System.Management.Automation.PSCredential]
+    [System.Management.Automation.CredentialAttribute()]
+    $Credential,
+
+	[Parameter(ParameterSetName='IndividualByTitle',Mandatory=$True,HelpMessage='Please specify if the site is a SharePoint Online site')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$True,HelpMessage='Please specify if the site is a SharePoint Online site')]
+    [Alias('IsSPO')][boolean]$IsSharePointOnlineSite,
+
+    [Parameter(ParameterSetName='SMAByTitle',Mandatory=$true,HelpMessage='Please specify the title of the Group')]
+    [Parameter(ParameterSetName='IndividualByTitle',Mandatory=$true,HelpMessage='Please specify the title of the Group')]
+    [ValidateNotNullOrEmpty()][String]$GroupTitle,
+
+    [Parameter(ParameterSetName='SMAById',Mandatory=$true,HelpMessage='Please specify the Id of the Group')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$true,HelpMessage='Please specify the Id of the Group')]
+    [ValidateNotNullOrEmpty()][Int]$GroupId,
+
+    [Parameter(Mandatory=$true,HelpMessage='Please specify user name of the user to be removed to the group')]
+    [ValidateNotNullOrEmpty()][Alias('Remove')][String]$RemoveUserName
+    )
+
+    If($SPConnection)
+	{
+		$SPCredential = New-SPCredential -SPConnection $SPConnection
+		$SiteUrl = $SPConnection.SharePointSiteURL
+	} else {
+		$SPCredential = New-SPCredential -Credential $Credential -IsSharePointOnlineSite $IsSharePointOnlineSite
+	}
+	#Make sure the SharePoint Client SDK Runtime DLLs are loaded
+    Write-Verbose "Loading SharePoint client SDK assemblies."
+	$ImportDLL = Import-SPClientSDK
+
+	#Bind to site collection
+    Write-Verbose "Bind to site collection"
+	$Context = New-Object Microsoft.SharePoint.Client.ClientContext($SiteURL)
+	$Context.Credentials = $SPCredential
+    $web = $Context.Web
+    
+    #Get the group
+    Write-Verbose "Getting the SharePoint group."
+    Try{
+        $Groups = $web.SiteGroups
+        $Context.Load($Groups)
+        $Context.ExecuteQuery()
+        If ($GroupTitle)
+        {
+            Write-Verbose "Group Title specified: '$GroupTitle'."
+            $Group = $Groups.GetByName($GroupTitle)
+        } elseif ($GroupId) {
+            Write-Verbose "Group Id specified: '$GroupId'."
+            $Group = $Groups.GetById($GroupId)
+        } else {
+            Throw "Unable to retrieve the group."
+            Return $false
+        }
+        $Context.Load($Group)
+        $Context.ExecuteQuery()
+        $Context.Load($Group.Users)
+        $Context.ExecuteQuery()
+    } Catch {
+        throw $_.exception.innerexception
+        return $false
+    }
+    Write-Verbose "removing the user '$RemoveUserName' from the group"
+    try
+    {
+        $ToBeRemovedMember = $web.EnsureUser($RemoveUserName)
+        $context.Load($ToBeRemovedMember)
+        $Group.Users.Remove($ToBeRemovedMember)
+        $Context.ExecuteQuery()
+        $true
+    } catch {
+        throw $_.Exception.InnerException
+        $false
+    }
+}
+
+# .EXTERNALHELP SharePointSDK.psm1-Help.xml
+Function Clear-SPSiteRecycleBin
+{
+    [OutputType('System.Boolean')]
+    [CmdletBinding()]
+	Param(
+    [Parameter(ParameterSetName='SMAConnection',Mandatory=$True,HelpMessage='Please specify the SMA / Azure Autoamtion connection object')][Object]$SPConnection,
+	[Parameter(ParameterSetName='IndividualParameters',Mandatory=$True,HelpMessage='Please specify the SharePoint Site URL')][String]$SiteUrl,
+	[Parameter(ParameterSetName='IndividualParameters',Mandatory=$true,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')][Alias('cred')]
+    [System.Management.Automation.PSCredential]
+    [System.Management.Automation.CredentialAttribute()]
+    $Credential,
+	[Parameter(ParameterSetName='IndividualParameters',Mandatory=$True,HelpMessage='Please specify if the site is a SharePoint Online site')][Alias('IsSPO')][boolean]$IsSharePointOnlineSite
+    )
+
+    If($SPConnection)
+	{
+		$SPCredential = New-SPCredential -SPConnection $SPConnection
+		$SiteUrl = $SPConnection.SharePointSiteURL
+	} else {
+		$SPCredential = New-SPCredential -Credential $Credential -IsSharePointOnlineSite $IsSharePointOnlineSite
+	}
+	#Make sure the SharePoint Client SDK Runtime DLLs are loaded
+    Write-Verbose "Loading SharePoint client SDK assemblies."
+	$ImportDLL = Import-SPClientSDK
+
+	#Bind to site collection
+    Write-Verbose "Bind to site collection"
+	$Context = New-Object Microsoft.SharePoint.Client.ClientContext($SiteURL)
+	$Context.Credentials = $SPCredential
+    $web = $Context.Web
+    $site = $Context.Site
+    
+    #Get the group
+    Write-Verbose "Clearing recycle bin."
+    Try{
+        $web.RecycleBin.DeleteAll()
+        $Site.RecycleBin.DeleteAll()
+        $Context.ExecuteQuery()
+        $true
+    } Catch {
+        throw $_.exception.innerexception
+        $false
+    }
+}
+
+# .EXTERNALHELP SharePointSDK.psm1-Help.xml
+Function Get-SPSiteTemplate
+{
+    [OutputType('Microsoft.SharePoint.Client.WebTemplateCollection')]
+    [OutputType('Microsoft.SharePoint.Client.WebTemplate')]
+    [CmdletBinding()]
+	Param(
+    [Parameter(ParameterSetName='SMAConnection',Mandatory=$True,HelpMessage='Please specify the SMA / Azure Autoamtion connection object')]
+    [Object]$SPConnection,
+
+	[Parameter(ParameterSetName='IndividualParameters',Mandatory=$True,HelpMessage='Please specify the SharePoint Site URL')]
+    [String]$SiteUrl,
+
+	[Parameter(ParameterSetName='IndividualParameters',Mandatory=$true,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')]
+    [Alias('cred')]
+    [System.Management.Automation.PSCredential]
+    [System.Management.Automation.CredentialAttribute()]
+    $Credential,
+
+	[Parameter(ParameterSetName='IndividualParameters',Mandatory=$True,HelpMessage='Please specify if the site is a SharePoint Online site')]
+    [Alias('IsSPO')][boolean]$IsSharePointOnlineSite,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify the title of the site template')][String]$TemplateTitle=$null,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify the name of the site template')][String]$TemplateName=$null,
+
+    [Parameter(Mandatory=$false,HelpMessage='Please specify the locale for the site template to be retrieved')]
+    [ValidateScript({if ([System.Globalization.CultureInfo]::GetCultureInfoByIetfLanguageTag($_)){$true}else{$false}})]
+    [Alias('Locale')][String]$TemplateLocale='en-us'
+    )
+
+    If($SPConnection)
+	{
+		$SPCredential = New-SPCredential -SPConnection $SPConnection
+		$SiteUrl = $SPConnection.SharePointSiteURL
+	} else {
+		$SPCredential = New-SPCredential -Credential $Credential -IsSharePointOnlineSite $IsSharePointOnlineSite
+	}
+	#Make sure the SharePoint Client SDK Runtime DLLs are loaded
+    Write-Verbose "Loading SharePoint client SDK assemblies."
+	$ImportDLL = Import-SPClientSDK
+
+	#Bind to site collection
+    Write-Verbose "Bind to site collection"
+	$Context = New-Object Microsoft.SharePoint.Client.ClientContext($SiteURL)
+	$Context.Credentials = $SPCredential
+    $web = $Context.Web
+    
+    #Get the all avaialble templates
+    Write-Verbose "Getting all avaialbe SharePoint site template for locale '$TemplateLocale'."
+    Try
+    {
+        $LCID = [System.Globalization.CultureInfo]::GetCultureInfoByIetfLanguageTag($TemplateLocale).LCID
+        $AvailableTemplates = $web.GetAvailableWebTemplates($LCID,$true)
+        $context.Load($AvailableTemplates)
+        $Context.ExecuteQuery()
+    } catch {
+        Throw $_.Exception.InnerException
+        Return
+    }
+    If ($AvailableTemplates.count -eq 0)
+    {
+        Throw "No site templates found for locale '$TemplateLocale'."
+        Return
+    }
+    #Get the specific template if the template title or name is specified
+    If ($TemplateTitle)
+    {
+        Write-Verbose "Getting site template with title '$TemplateTitle'."
+        $SpecifiedTemplate = $AvailableTemplates | Where-Object {$_.Title -ieq $TemplateTitle}
+        If (!$SpecifiedTemplate)
+        {
+            Throw "The specified site template with title '$TemplateTitle' for locale '$TemplateLocale' does not exist!"
+            Return
+        } else {
+            Return $SpecifiedTemplate
+        }
+    } elseif ($TemplateName) {
+        Write-Verbose "Getting site template with name '$TemplateName'."
+        $SpecifiedTemplate = $AvailableTemplates | Where-Object {$_.Name -ieq $TemplateName}
+        If (!$SpecifiedTemplate)
+        {
+            Throw "The specified site template with name '$TemplateName' for locale '$TemplateLocale' does not exist!"
+            Return
+        } else {
+            Return $SpecifiedTemplate
+        }
+    } else {
+        return $AvailableTemplates
+    }
+}
+
+# .EXTERNALHELP SharePointSDK.psm1-Help.xml
+Function New-SPSubSite
+{
+    [OutputType('Microsoft.SharePoint.Client.Site')]
+    [CmdletBinding()]
+	Param(
+    [Parameter(ParameterSetName='SMAConnection',Mandatory=$True,HelpMessage='Please specify the SMA / Azure Autoamtion connection object')][Object]$SPConnection,
+	[Parameter(ParameterSetName='IndividualParameter',Mandatory=$True,HelpMessage='Please specify the SharePoint Root Site URL')][Alias('RootSiteURL')][String]$SiteUrl,
+	[Parameter(ParameterSetName='IndividualParameter',Mandatory=$true,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')][Alias('cred')]
+    [System.Management.Automation.PSCredential]
+    [System.Management.Automation.CredentialAttribute()]
+    $Credential,
+	[Parameter(ParameterSetName='IndividualParameter',Mandatory=$True,HelpMessage='Please specify if the site is a SharePoint Online site')][Alias('IsSPO')][boolean]$IsSharePointOnlineSite,
+    [Parameter(Mandatory=$true,HelpMessage='Please specify the title of the new site')][ValidateNotNullOrEmpty()][String]$NewSiteTitle,
+    [Parameter(Mandatory=$true,HelpMessage='Please specify the Url leaf name of the new site')][ValidateNotNullOrEmpty()][String]$NewSiteUrlLeaf,
+    [Parameter(Mandatory=$false,HelpMessage='Please specify the description of the new site')][String]$NewSiteDescription=$Null,
+    [Parameter(Mandatory=$true,HelpMessage='Please specify the name of the site template to be used for the new site')][ValidateNotNullOrEmpty()][Alias('TemplateName')][String]$NewSiteTemplateName,
+    [Parameter(Mandatory=$false,HelpMessage='Please specify the locale for the site template to be used for the new site')]
+    [ValidateScript({if ([System.Globalization.CultureInfo]::GetCultureInfoByIetfLanguageTag($_)){$true}else{$false}})]
+    [Alias('TemplateLocale','Locale')][String]$NewSiteTemplateLocale='en-us'
+    )
+
+    If($SPConnection)
+	{
+		$SPCredential = New-SPCredential -SPConnection $SPConnection
+		$SiteUrl = $SPConnection.SharePointSiteURL
+	} else {
+		$SPCredential = New-SPCredential -Credential $Credential -IsSharePointOnlineSite $IsSharePointOnlineSite
+	}
+	#Make sure the SharePoint Client SDK Runtime DLLs are loaded
+    Write-Verbose "Loading SharePoint client SDK assemblies."
+	$ImportDLL = Import-SPClientSDK
+
+	#Bind to site collection
+    Write-Verbose "Bind to site collection"
+	$Context = New-Object Microsoft.SharePoint.Client.ClientContext($SiteURL)
+	$Context.Credentials = $SPCredential
+    $web = $Context.Web
+
+    #Validate specified site template
+    Try
+    {
+        $LCID = [System.Globalization.CultureInfo]::GetCultureInfoByIetfLanguageTag($NewSiteTemplateLocale).LCID
+        $AvailableTemplates = $web.GetAvailableWebTemplates($LCID,$true)
+        $context.Load($AvailableTemplates)
+        $Context.ExecuteQuery()
+        $SpecifiedTemplate = $AvailableTemplates | Where-Object {$_.Name -ieq $NewSiteTemplateName}
+        If (!$SpecifiedTemplate)
+        {
+            Throw "The specified site template '$NewSiteTemplateName' does not exist!"
+        }
+    } catch {
+        Throw $_.Exception.InnerException
+        Return
+    }
+
+    #Create new site
+    Write-Verbose "Creating 'Microsoft.SharePoint.Client.WebCreationInformation' object for new site `'$NewSiteTitle`'."
+    $CreationInfo = New-object Microsoft.SharePoint.Client.WebCreationInformation
+    $CreationInfo.Url = $NewSiteUrlLeaf
+    $CreationInfo.Title = $NewSiteTitle
+    if ($NewSiteDescription)
+    {
+        Write-Verbose "New site Description: '$NewSiteDescription'."
+        $CreationInfo.Description = $NewSiteDescription
+    }
+    $CreationInfo.WebTemplate = $NewSiteTemplateName
+    try
+    {
+        #Create the site
+        write-verbose "Creating list '$ListTitle'."
+        $NewSite = $web.webs.Add($CreationInfo)
+        $Context.Load($NewSite)
+        $Context.ExecuteQuery()
+        
+        #Retrieve the site
+        Write-Verbose "Retrieving the new site."
+        $Context.Load($NewSite)
+        $Context.ExecuteQuery()
+        Write-Verbose "Returning the new site."
+        $NewSite
+    } catch {
+        throw $_.Exception.InnerException
+    }
+}
+
+# .EXTERNALHELP SharePointSDK.psm1-Help.xml
+Function Get-SPSubSite
+{
+    [OutputType('System.Array')]
+    [CmdletBinding()]
+	Param(
+    [Parameter(ParameterSetName='SMAConnection',Mandatory=$True,HelpMessage='Please specify the SMA / Azure Autoamtion connection object')][Object]$SPConnection,
+	[Parameter(ParameterSetName='IndividualParameter',Mandatory=$True,HelpMessage='Please specify the SharePoint Root Site URL')][Alias('RootSiteURL')][String]$SiteUrl,
+	[Parameter(ParameterSetName='IndividualParameter',Mandatory=$true,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')][Alias('cred')]
+    [System.Management.Automation.PSCredential]
+    [System.Management.Automation.CredentialAttribute()]
+    $Credential,
+	[Parameter(ParameterSetName='IndividualParameter',Mandatory=$True,HelpMessage='Please specify if the site is a SharePoint Online site')][Alias('IsSPO')][boolean]$IsSharePointOnlineSite
+    )
+
+    If($SPConnection)
+	{
+		$SPCredential = New-SPCredential -SPConnection $SPConnection
+		$SiteUrl = $SPConnection.SharePointSiteURL
+	} else {
+		$SPCredential = New-SPCredential -Credential $Credential -IsSharePointOnlineSite $IsSharePointOnlineSite
+	}
+	#Make sure the SharePoint Client SDK Runtime DLLs are loaded
+    Write-Verbose "Loading SharePoint client SDK assemblies."
+	$ImportDLL = Import-SPClientSDK
+
+	#Bind to site collection
+    Write-Verbose "Bind to site collection"
+	$Context = New-Object Microsoft.SharePoint.Client.ClientContext($SiteURL)
+	$Context.Credentials = $SPCredential
+    $web = $Context.Web
+
+    $Sites = $web.Webs
+    $Context.Load($web)
+    $Context.Load($Sites)
+    $Context.ExecuteQuery()
+    $arrSites = @()
+    Foreach ($Site in $Sites)
+    {
+        $Context.Load($Site)
+        $Context.ExecuteQuery()
+        $arrSites +=$Site
+    }
+    Write-Verbose "Total number of subsites: $($arrSites.count)."
+    ,$arrSites
+}
+
+# .EXTERNALHELP SharePointSDK.psm1-Help.xml
+Function Remove-SPSubSite
+{
+    [OutputType('System.Boolean')]
+    [CmdletBinding()]
+	Param(
+    [Parameter(ParameterSetName='SMAConnection',Mandatory=$True,HelpMessage='Please specify the SMA / Azure Autoamtion connection object')][Object]$SPConnection,
+	[Parameter(ParameterSetName='IndividualParameter',Mandatory=$True,HelpMessage='Please specify the SharePoint Root Site URL')][Alias('RootSiteURL')][String]$SiteUrl,
+	[Parameter(ParameterSetName='IndividualParameter',Mandatory=$true,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')][Alias('cred')]
+    [System.Management.Automation.PSCredential]
+    [System.Management.Automation.CredentialAttribute()]
+    $Credential,
+	[Parameter(ParameterSetName='IndividualParameter',Mandatory=$True,HelpMessage='Please specify if the site is a SharePoint Online site')][Alias('IsSPO')][boolean]$IsSharePointOnlineSite,
+    [Parameter(Mandatory=$true,HelpMessage='Please specify the Url of the sub site that is going to be deleted')][ValidateNotNullOrEmpty()][String]$SubSiteURL
+    )
+
+    If($SPConnection)
+	{
+		$SPCredential = New-SPCredential -SPConnection $SPConnection
+		$SiteUrl = $SPConnection.SharePointSiteURL
+	} else {
+		$SPCredential = New-SPCredential -Credential $Credential -IsSharePointOnlineSite $IsSharePointOnlineSite
+	}
+	#Make sure the SharePoint Client SDK Runtime DLLs are loaded
+    Write-Verbose "Loading SharePoint client SDK assemblies."
+	$ImportDLL = Import-SPClientSDK
+
+	#Bind to site collection
+    Write-Verbose "Bind to site collection"
+	$Context = New-Object Microsoft.SharePoint.Client.ClientContext($SiteURL)
+	$Context.Credentials = $SPCredential
+    $web = $Context.Web
+
+    #Get all subsites
+    Write-Verbose "Get all subsites"
+    $Subsites = $web.Webs
+    $Subsites = $web.Webs
+    $Context.Load($web)
+    $Context.Load($Subsites)
+    $Context.ExecuteQuery()
+    Foreach ($site in $Subsites)
+    {
+        $Context.Load($Site)
+        $Context.ExecuteQuery()
+        If ($site.url -ieq $SubSiteURL)
+        {
+            Write-Verbose "Subsite found. Site Title: '$($Site.Title)'."
+            $SiteToBeDeleted = $Site
+        }
+    }
+    If ($SiteToBeDeleted)
+    {
+        Write-Verbose "Deleting site '$($SiteToBeDeleted.Url)'."
+        Try{
+            $SiteToBeDeleted.DeleteObject()
+            $Context.ExecuteQuery()
+            $Result = $true
+        } Catch {
+            Throw $_.Exception.InnerException
+            $Result = $false
+        }
+    } else {
+        Throw "Unable to find sub site with URL '$SubSiteUrl'."
+        $Result = $false
+    }
+    $Result
+}
+
+# .EXTERNALHELP SharePointSDK.psm1-Help.xml
+Function Add-SPListFieldToDefaultView
+{
+    [OutputType('System.Boolean')]
+    [CmdletBinding()]
+	Param(
+    [Parameter(ParameterSetName='SMAByTitle',Mandatory=$True,HelpMessage='Please specify the SMA / Azure Autoamtion connection object')]
+    [Parameter(ParameterSetName='SMAById',Mandatory=$True,HelpMessage='Please specify the SMA / Azure Autoamtion connection object')]
+    [Object]$SPConnection,
+
+	[Parameter(ParameterSetName='IndividualByTitle',Mandatory=$True,HelpMessage='Please specify the SharePoint Site URL')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$True,HelpMessage='Please specify the SharePoint Site URL')]
+    [String]$SiteUrl,
+
+	[Parameter(ParameterSetName='IndividualByTitle',Mandatory=$true,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$true,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')]
+    [Alias('cred')]
+    [System.Management.Automation.PSCredential]
+    [System.Management.Automation.CredentialAttribute()]
+    $Credential,
+
+	[Parameter(ParameterSetName='IndividualByTitle',Mandatory=$True,HelpMessage='Please specify if the site is a SharePoint Online site')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$True,HelpMessage='Please specify if the site is a SharePoint Online site')]
+    [Alias('IsSPO')][boolean]$IsSharePointOnlineSite,
+
+    [Parameter(ParameterSetName='SMAByTitle',Mandatory=$true,HelpMessage='Please specify the title of the list')]
+    [Parameter(ParameterSetName='IndividualByTitle',Mandatory=$true,HelpMessage='Please specify the title of the list')]
+    [ValidateNotNullOrEmpty()][String]$ListTitle,
+
+    [Parameter(ParameterSetName='SMAById',Mandatory=$true,HelpMessage='Please specify the Id of the list')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$true,HelpMessage='Please specify the Id of the list')]
+    [ValidateNotNullOrEmpty()][Guid]$ListId,
+
+    [Parameter(Mandatory=$true,HelpMessage='Please specify the internal name of the list field')]
+    [ValidateNotNullOrEmpty()][Alias('ColumnInternalName')][String]$FieldInternalName
+    )
+
+    If($SPConnection)
+	{
+		$SPCredential = New-SPCredential -SPConnection $SPConnection
+		$SiteUrl = $SPConnection.SharePointSiteURL
+	} else {
+		$SPCredential = New-SPCredential -Credential $Credential -IsSharePointOnlineSite $IsSharePointOnlineSite
+	}
+	#Make sure the SharePoint Client SDK Runtime DLLs are loaded
+    Write-Verbose "Loading SharePoint client SDK assemblies."
+	$ImportDLL = Import-SPClientSDK
+
+	#Bind to site collection
+    Write-Verbose "Bind to site collection"
+	$Context = New-Object Microsoft.SharePoint.Client.ClientContext($SiteURL)
+	$Context.Credentials = $SPCredential
+    $web = $Context.Web
+    
+    #Get the list
+    Write-Verbose "Getting the SharePoint list."
+    If ($ListTitle)
+    {
+        Write-Verbose "List Title specified: '$ListTitle'."
+        $List = $web.Lists.GetByTitle($ListTitle)
+    } elseif ($ListId) {
+        Write-Verbose "List Id specified: '$($ListId.ToString())'."
+        $List = $web.Lists.GetById($ListId)
+    } else {
+        Throw "Unable to retrieve the list."
+        Return $false
+    }
+    $Context.Load($List)
+    $Context.Load($List.Fields)
+    $Context.ExecuteQuery()
+    
+    #Add the field to the default view
+    Write-Verbose "Adding the list field to the default view"
+    Try {
+        $Context.Load($List.DefaultView)
+        $List.DefaultView.ViewFields.Add($FieldInternalName)
+        $List.DefaultView.Update()
+        $Context.ExecuteQuery()
+        Return $True
+    } Catch {
+        Throw $_.Exception.InnerException
+        Return $false
+    }
+}
+
+# .EXTERNALHELP SharePointSDK.psm1-Help.xml
+Function Remove-SPListFieldFromDefaultView
+{
+    [OutputType('System.Boolean')]
+    [CmdletBinding()]
+	Param(
+    [Parameter(ParameterSetName='SMAByTitle',Mandatory=$True,HelpMessage='Please specify the SMA / Azure Autoamtion connection object')]
+    [Parameter(ParameterSetName='SMAById',Mandatory=$True,HelpMessage='Please specify the SMA / Azure Autoamtion connection object')]
+    [Object]$SPConnection,
+
+	[Parameter(ParameterSetName='IndividualByTitle',Mandatory=$True,HelpMessage='Please specify the SharePoint Site URL')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$True,HelpMessage='Please specify the SharePoint Site URL')]
+    [String]$SiteUrl,
+
+	[Parameter(ParameterSetName='IndividualByTitle',Mandatory=$true,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$true,HelpMessage='Please specify the user credential to connect to the SharePoint or SharePoint Online site')]
+    [Alias('cred')]
+    [System.Management.Automation.PSCredential]
+    [System.Management.Automation.CredentialAttribute()]
+    $Credential,
+
+	[Parameter(ParameterSetName='IndividualByTitle',Mandatory=$True,HelpMessage='Please specify if the site is a SharePoint Online site')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$True,HelpMessage='Please specify if the site is a SharePoint Online site')]
+    [Alias('IsSPO')][boolean]$IsSharePointOnlineSite,
+
+    [Parameter(ParameterSetName='SMAByTitle',Mandatory=$true,HelpMessage='Please specify the title of the list')]
+    [Parameter(ParameterSetName='IndividualByTitle',Mandatory=$true,HelpMessage='Please specify the title of the list')]
+    [ValidateNotNullOrEmpty()][String]$ListTitle,
+
+    [Parameter(ParameterSetName='SMAById',Mandatory=$true,HelpMessage='Please specify the Id of the list')]
+    [Parameter(ParameterSetName='IndividualById',Mandatory=$true,HelpMessage='Please specify the Id of the list')]
+    [ValidateNotNullOrEmpty()][Guid]$ListId,
+
+    [Parameter(Mandatory=$true,HelpMessage='Please specify the internal name of the list field')]
+    [ValidateNotNullOrEmpty()][Alias('ColumnInternalName')][String]$FieldInternalName
+    )
+
+    If($SPConnection)
+	{
+		$SPCredential = New-SPCredential -SPConnection $SPConnection
+		$SiteUrl = $SPConnection.SharePointSiteURL
+	} else {
+		$SPCredential = New-SPCredential -Credential $Credential -IsSharePointOnlineSite $IsSharePointOnlineSite
+	}
+	#Make sure the SharePoint Client SDK Runtime DLLs are loaded
+    Write-Verbose "Loading SharePoint client SDK assemblies."
+	$ImportDLL = Import-SPClientSDK
+
+	#Bind to site collection
+    Write-Verbose "Bind to site collection"
+	$Context = New-Object Microsoft.SharePoint.Client.ClientContext($SiteURL)
+	$Context.Credentials = $SPCredential
+    $web = $Context.Web
+    
+    #Get the list
+    Write-Verbose "Getting the SharePoint list."
+    If ($ListTitle)
+    {
+        Write-Verbose "List Title specified: '$ListTitle'."
+        $List = $web.Lists.GetByTitle($ListTitle)
+    } elseif ($ListId) {
+        Write-Verbose "List Id specified: '$($ListId.ToString())'."
+        $List = $web.Lists.GetById($ListId)
+    } else {
+        Throw "Unable to retrieve the list."
+        Return $false
+    }
+    $Context.Load($List)
+    $Context.Load($List.Fields)
+    $Context.ExecuteQuery()
+    
+    #Remove the field from the default view
+    Write-Verbose "Removing the list field From the default view"
+    Try {
+        $Context.Load($List.DefaultView)
+        $List.DefaultView.ViewFields.Remove($FieldInternalName)
+        $List.DefaultView.Update()
+        $Context.ExecuteQuery()
+        Return $True
+    } Catch {
+        Throw $_.Exception.InnerException
+        Return $false
+    }
 }
