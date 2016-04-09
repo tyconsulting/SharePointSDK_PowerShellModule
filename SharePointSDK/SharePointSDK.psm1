@@ -2730,20 +2730,20 @@ Function Set-SPListFieldVisibility
     [Parameter(ParameterSetName='IndividualByTitle',Mandatory=$true,HelpMessage='Please specify the title of the list')]
     [ValidateNotNullOrEmpty()][String]$ListTitle,
 
-    [Parameter(ParameterSetName='SMAById',Mandatory=$true,HelpMessage='Please specify the Id of the list')]
+    [Parameter(ParameterSetName='SMAById',Mandatory=$true,HelpMessage='Please specify the Id of the list.')]
     [Parameter(ParameterSetName='IndividualById',Mandatory=$true,HelpMessage='Please specify the Id of the list')]
     [ValidateNotNullOrEmpty()][Guid]$ListId,
 
     [Parameter(Mandatory=$true,HelpMessage='Please specify the Field name')]
     [ValidateNotNullOrEmpty()][Alias('ColumnName','ColumnTitle','FieldTitle')][String]$FieldName,
 
-    [Parameter(Mandatory=$false,HelpMessage='Please specify the if this field should be shown in the edit form')]
+    [Parameter(Mandatory=$false,HelpMessage='Please specify the if this field should be shown in the edit form.')]
     [Boolean]$ShowInEditForm,
 
-    [Parameter(Mandatory=$false,HelpMessage='Please specify the if this field should be shown in the new form')]
+    [Parameter(Mandatory=$false,HelpMessage='Please specify the if this field should be shown in the new form.')]
     [Boolean]$ShowInNewForm,
 
-    [Parameter(Mandatory=$false,HelpMessage='Please specify the if this field should be shown in the display form')]
+    [Parameter(Mandatory=$false,HelpMessage='Please specify the if this field should be shown in the display form.')]
     [Boolean]$ShowInDisplayForm
     )
 
