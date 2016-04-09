@@ -2753,24 +2753,6 @@ Function Set-SPListFieldVisibility
     {
         Throw "Please specify at least one of the following parameters: 'ShowInEditForm', 'ShowInNewForm', 'ShowInDisplayForm'"
         Return $false
-    } else {
-        #Get the value for 'ShowInEditForm'
-        if ($PSBoundParameters.ContainsKey("ShowInEditForm"))
-        {
-            $bShowInEditForm = $PSBoundParameters.ShowInEditForm
-        }
-
-        #Get the value for 'ShowInNewForm'
-        if ($PSBoundParameters.ContainsKey("ShowInNewForm"))
-        {
-            $bShowInNewForm = $PSBoundParameters.ShowInNewForm
-        }
-
-        #Get the value for 'ShowInDisplayForm'
-        if ($PSBoundParameters.ContainsKey("ShowInDisplayForm"))
-        {
-            $bShowInDisplayForm = $PSBoundParameters.ShowInDisplayForm
-        }
     }
 
     If($SPConnection)
@@ -2820,26 +2802,26 @@ Function Set-SPListFieldVisibility
     {
         $Field = $List.Fields.GetByInternalNameOrTitle($FieldName)
         #ShowInEditForm
-        If ($bShowInEditForm -ne $null)
+        If ($PSBoundParameters.ContainsKey("ShowInEditForm"))
         {
-            Write-Verbose "Setting ShowInEditForm to '$bShowInEditForm'"
-            $Field.SetShowInEditForm($bShowInEditForm)
+            Write-Verbose "Setting ShowInEditForm to '$ShowInEditForm'"
+            $Field.SetShowInEditForm($ShowInEditForm)
             $Context.ExecuteQuery()
         }
 
         #ShowInNewForm
-        If ($bShowInEditForm -ne $null)
+        If ($PSBoundParameters.ContainsKey("ShowInNewForm"))
         {
             Write-Verbose "Setting ShowInNewForm to '$ShowInNewForm'"
-            $Field.SetShowInNewForm($bShowInNewForm)
+            $Field.SetShowInNewForm($ShowInNewForm)
             $Context.ExecuteQuery()
         }
 
         #ShowInDisplayForm
-        If ($ShowInDisplayForm -ne $null)
+        If ($PSBoundParameters.ContainsKey("ShowInDisplayForm"))
         {
-            Write-Verbose "Setting ShowInDisplayForm to '$bShowInDisplayForm'"
-            $Field.SetShowInDisplayForm($bShowInDisplayForm)
+            Write-Verbose "Setting ShowInDisplayForm to '$ShowInDisplayForm'"
+            $Field.SetShowInDisplayForm($ShowInDisplayForm)
             $Context.ExecuteQuery()
         }
         $true
