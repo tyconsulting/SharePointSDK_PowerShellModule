@@ -1068,6 +1068,9 @@ Function New-SPListLookupField
     [Parameter(Mandatory=$true,HelpMessage="Please specify the field to be displayed")]
     [ValidateNotNullOrEmpty()][String]$ShowField,
 
+    [Parameter(Mandatory=$false,HelpMessage="Please specify if the field allows multiple values")]
+    [ValidateNotNullOrEmpty()][Boolean]$AllowMultipleValues=$false,
+
     [Parameter(Mandatory=$false,HelpMessage="Please specify the additional fields from the source list to be added")]
     [ValidateNotNullOrEmpty()][String[]]$AdditionalSourceFields,
 
@@ -1136,8 +1139,12 @@ Function New-SPListLookupField
     }
     Write-Verbose "List Id: '$strListId'."
     $LookupFieldGUID = [System.Guid]::NewGuid().ToString()
-    $fieldXML = "<Field Type='Lookup' ID='{$LookupFieldGUID}' DisplayName='$FieldDisplayName' List='{$SourceListId}' ShowField='$ShowField' RelationshipDeleteBehavior='$RelationshipDeleteBehavior' Name='$FieldName' StaticName='$FieldName' Description='$FieldDescription' Required='$($Required.ToString().ToUpper())' EnforceUniqueValues='$($EnforceUniqueValues.ToString().ToUpper())' Indexed='$($bIndexed.ToString().ToUpper())'/>"
-    
+    If ($AllowMultipleValues -eq $false)
+    {
+        $fieldXML = "<Field Type='Lookup' ID='{$LookupFieldGUID}' DisplayName='$FieldDisplayName' List='{$SourceListId}' ShowField='$ShowField' RelationshipDeleteBehavior='$RelationshipDeleteBehavior' Name='$FieldName' StaticName='$FieldName' Description='$FieldDescription' Required='$($Required.ToString().ToUpper())' EnforceUniqueValues='$($EnforceUniqueValues.ToString().ToUpper())' Indexed='$($bIndexed.ToString().ToUpper())'/>"
+    } else {
+        $fieldXML = "<Field Type='LookupMulti' ID='{$LookupFieldGUID}' DisplayName='$FieldDisplayName' List='{$SourceListId}' ShowField='$ShowField' RelationshipDeleteBehavior='$RelationshipDeleteBehavior' Name='$FieldName' StaticName='$FieldName' Description='$FieldDescription' Required='$($Required.ToString().ToUpper())' EnforceUniqueValues='FALSE' Indexed='$($bIndexed.ToString().ToUpper())' Mult='TRUE' Sortable='FALSE' Group=''/>"
+    }
     Write-Verbose "Field XML: `"$fieldXML`""
     Write-Verbose "Adding the Field to the list"
     
@@ -1186,9 +1193,14 @@ Function New-SPListLookupField
                 Write-Verbose "Source Field Static Name: '$SourceFieldStaticName'."
                 $AdditionalFieldGUID = [System.Guid]::NewGuid().ToString()
                 $AdditionalFieldName = "$FieldDisplayName`_$SourceFieldStaticName"
-                $AdditionalFieldXML = "<Field Type='Lookup' DisplayName='$FieldDisplayName`:$AdditionalFieldDisplayName' List='{$SourceListId}' WebId='$WebId' ShowField='$SourceFieldInternalName' FieldRef='$LookupFieldGUID' ReadOnly='TRUE' UnlimitedLengthInDocumentLibrary='FALSE' ID='{$AdditionalFieldGUID}' SourceID='{$($List.Id.ToString())}' StaticName='$AdditionalFieldName' Name='$AdditionalFieldName'/>"
-                #$AdditionalFieldXML = "<Field Type='Lookup' DisplayName='$FieldDisplayName`:$AdditionalFieldDisplayName' List='{$SourceListId}' WebId='$WebId' ShowField='$SourceFieldInternalName' FieldRef='$LookupFieldGUID' ReadOnly='TRUE' UnlimitedLengthInDocumentLibrary='FALSE' ID='{$AdditionalFieldGUID}' SourceID='{$($List.Id.ToString())}' StaticName='$AdditionalFieldName' Name='$AdditionalFieldName' Version='$SourceFieldVersion'/>"
-                
+                If ($AllowMultipleValues)
+                {
+                    $AdditionalFieldXML = "<Field Type='LookupMulti' DisplayName='$FieldDisplayName`:$AdditionalFieldDisplayName' List='{$SourceListId}' WebId='$WebId' ShowField='$SourceFieldInternalName' FieldRef='$LookupFieldGUID' ReadOnly='TRUE' UnlimitedLengthInDocumentLibrary='FALSE' ID='{$AdditionalFieldGUID}' SourceID='{$($List.Id.ToString())}' StaticName='$AdditionalFieldName' Name='$AdditionalFieldName' Group='Custom Columns' Mult='TRUE' Sortable='FALSE'/>"
+                } else {
+                    $AdditionalFieldXML = "<Field Type='Lookup' DisplayName='$FieldDisplayName`:$AdditionalFieldDisplayName' List='{$SourceListId}' WebId='$WebId' ShowField='$SourceFieldInternalName' FieldRef='$LookupFieldGUID' ReadOnly='TRUE' UnlimitedLengthInDocumentLibrary='FALSE' ID='{$AdditionalFieldGUID}' SourceID='{$($List.Id.ToString())}' StaticName='$AdditionalFieldName' Name='$AdditionalFieldName'/>"
+                    #$AdditionalFieldXML = "<Field Type='Lookup' DisplayName='$FieldDisplayName`:$AdditionalFieldDisplayName' List='{$SourceListId}' WebId='$WebId' ShowField='$SourceFieldInternalName' FieldRef='$LookupFieldGUID' ReadOnly='TRUE' UnlimitedLengthInDocumentLibrary='FALSE' ID='{$AdditionalFieldGUID}' SourceID='{$($List.Id.ToString())}' StaticName='$AdditionalFieldName' Name='$AdditionalFieldName' Version='$SourceFieldVersion'/>"
+                }
+
                 Write-Verbose "Additional field XML: '$AdditionalFieldXML'"
                 if ($AddToDefaultView)
                 {
