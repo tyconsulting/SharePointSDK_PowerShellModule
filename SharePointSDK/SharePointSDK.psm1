@@ -3449,7 +3449,7 @@ Function New-SPSubSite
     try
     {
         #Create the site
-        write-verbose "Creating list '$ListTitle'."
+        write-verbose "Creating subsite '$NewSiteTitle'."
         $NewSite = $web.webs.Add($CreationInfo)
         $Context.Load($NewSite)
         $Context.ExecuteQuery()
