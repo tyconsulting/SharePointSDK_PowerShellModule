@@ -1840,7 +1840,7 @@ $ListFields = Get-SPListFields -SiteUrl &quot;https://yourcompany.sharepoint.com
 				<command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="named" aliases="">
 					<maml:name>ListItemId</maml:name>
 					<maml:description>
-						<maml:para>The Id of the list</maml:para>
+						<maml:para>The Id of the list item</maml:para>
 					</maml:description>
 					<command:parameterValue required="false" variableLength="false">Int32</command:parameterValue>
 					<dev:defaultValue/>
@@ -1867,7 +1867,7 @@ $ListFields = Get-SPListFields -SiteUrl &quot;https://yourcompany.sharepoint.com
 				<command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="named" aliases="">
 					<maml:name>ListItemId</maml:name>
 					<maml:description>
-						<maml:para>The Id of the list</maml:para>
+						<maml:para>The Id of the list item</maml:para>
 					</maml:description>
 					<command:parameterValue required="false" variableLength="false">Int32</command:parameterValue>
 					<dev:defaultValue/>
@@ -1919,7 +1919,7 @@ $ListFields = Get-SPListFields -SiteUrl &quot;https://yourcompany.sharepoint.com
 			<command:parameter required="false" variableLength="false" globbing="false" pipelineInput="false" position="named" aliases="">
 				<maml:name>ListItemId</maml:name>
 				<maml:description>
-					<maml:para>The Id of the list</maml:para>
+					<maml:para>The Id of the list item</maml:para>
 				</maml:description>
 				<command:parameterValue required="false" variableLength="false">Int32</command:parameterValue>
 				<dev:type>
@@ -2177,7 +2177,7 @@ $ListItem = Get-SPListItem -SiteUrl &quot;https://yourcompany.sharepoint.com&quo
 			<command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="named" aliases="">
 				<maml:name>ListItemID</maml:name>
 				<maml:description>
-					<maml:para>The ID of the item to be deleted</maml:para>
+					<maml:para>The ID of the item to be retrieved</maml:para>
 				</maml:description>
 				<command:parameterValue required="true" variableLength="false">Int32</command:parameterValue>
 				<dev:type>
@@ -2286,225 +2286,6 @@ $DownloadAttachments = Get-SPListItemAttachments -SiteUrl &quot;https://yourcomp
 				<dev:remarks>
 					<maml:para>
 					</maml:para>
-				</dev:remarks>
-			</command:example>
-		</command:examples>
-	</command:command>
-	<command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10">
-		<!-- Command-->
-		<command:details>
-			<command:name>Get-SPListItemAttachmentUrl</command:name>
-			<maml:description>
-				<maml:para>Get URLs of all attachments from a SharePoint list item.</maml:para>
-			</maml:description>
-			<maml:copyright>
-				<maml:para/>
-			</maml:copyright>
-			<command:verb>Get</command:verb>
-			<command:noun>SPListItemAttachmentUrl</command:noun>
-			<dev:version/>
-		</command:details>
-		<maml:description>
-			<maml:para>Get URLs of all attachments from a SharePoint list item.  Please note this function DOES NOT work on SharePoint 2010 sites.</maml:para>
-		</maml:description>
-		<command:syntax>
-			<!-- Parameter Sets-->
-			<command:syntaxItem>
-				<maml:name>Get-SPListItemAttachments</maml:name>
-				<command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="named" aliases="">
-					<maml:name>SPConnection</maml:name>
-					<maml:description>
-						<maml:para>SharePointSDK Connection object (SMA / Azure Automation connection or hash table).</maml:para>
-					</maml:description>
-					<command:parameterValue required="true" variableLength="false">Object</command:parameterValue>
-					<dev:defaultValue/>
-				</command:parameter>
-				<command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="named" aliases="">
-					<maml:name>ListName</maml:name>
-					<maml:description>
-						<maml:para>Name of the list</maml:para>
-					</maml:description>
-					<command:parameterValue required="true" variableLength="false">String</command:parameterValue>
-					<dev:defaultValue/>
-				</command:parameter>
-				<command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="named" aliases="">
-					<maml:name>ListItemID</maml:name>
-					<maml:description>
-						<maml:para>The ID of the item to be deleted</maml:para>
-					</maml:description>
-					<command:parameterValue required="true" variableLength="false">Int32</command:parameterValue>
-					<dev:defaultValue/>
-				</command:parameter>
-			</command:syntaxItem>
-			<command:syntaxItem>
-				<maml:name>Get-SPListItemAttachments</maml:name>
-				<command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="named" aliases="">
-					<maml:name>SiteUrl</maml:name>
-					<maml:description>
-						<maml:para>SharePoint Site Url</maml:para>
-					</maml:description>
-					<command:parameterValue required="true" variableLength="false">String</command:parameterValue>
-					<dev:defaultValue/>
-				</command:parameter>
-				<command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="named" aliases="">
-					<maml:name>ListName</maml:name>
-					<maml:description>
-						<maml:para>Name of the list</maml:para>
-					</maml:description>
-					<command:parameterValue required="true" variableLength="false">String</command:parameterValue>
-					<dev:defaultValue/>
-				</command:parameter>
-				<command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="named" aliases="cred">
-					<maml:name>Credential</maml:name>
-					<maml:description>
-						<maml:para>The PSCredential object that contains the user name and password required to connect to the SharePoint site.</maml:para>
-					</maml:description>
-					<command:parameterValue required="true" variableLength="false">PSCredential</command:parameterValue>
-					<dev:defaultValue/>
-				</command:parameter>
-				<command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="named" aliases="IsSPO">
-					<maml:name>IsSharePointOnlineSite</maml:name>
-					<maml:description>
-						<maml:para>Specify if the site is a SharePoint Online site</maml:para>
-					</maml:description>
-					<command:parameterValue required="false" variableLength="false">Boolean</command:parameterValue>
-					<dev:defaultValue/>
-				</command:parameter>
-				<command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="named" aliases="">
-					<maml:name>ListItemID</maml:name>
-					<maml:description>
-						<maml:para>The ID of the item to be deleted</maml:para>
-					</maml:description>
-					<command:parameterValue required="true" variableLength="false">Int32</command:parameterValue>
-					<dev:defaultValue/>
-				</command:parameter>
-			</command:syntaxItem>
-		</command:syntax>
-		<command:parameters>
-			<!-- All Parameters-->
-			<command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="named" aliases="">
-				<maml:name>SPConnection</maml:name>
-				<maml:description>
-					<maml:para>SharePointSDK Connection object (SMA / Azure Automation connection or hash table).</maml:para>
-				</maml:description>
-				<command:parameterValue required="true" variableLength="false">Object</command:parameterValue>
-				<dev:type>
-					<maml:name>Object</maml:name>
-					<maml:uri/>
-				</dev:type>
-				<dev:defaultValue/>
-			</command:parameter>
-			<command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="named" aliases="">
-				<maml:name>ListName</maml:name>
-				<maml:description>
-					<maml:para>Name of the list</maml:para>
-				</maml:description>
-				<command:parameterValue required="true" variableLength="false">String</command:parameterValue>
-				<dev:type>
-					<maml:name>String</maml:name>
-					<maml:uri/>
-				</dev:type>
-				<dev:defaultValue/>
-			</command:parameter>
-			<command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="named" aliases="">
-				<maml:name>ListItemID</maml:name>
-				<maml:description>
-					<maml:para>The ID of the item to be deleted</maml:para>
-				</maml:description>
-				<command:parameterValue required="true" variableLength="false">Int32</command:parameterValue>
-				<dev:type>
-					<maml:name>Int32</maml:name>
-					<maml:uri/>
-				</dev:type>
-				<dev:defaultValue/>
-			</command:parameter>
-			<command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="named" aliases="">
-				<maml:name>SiteUrl</maml:name>
-				<maml:description>
-					<maml:para>SharePoint Site Url</maml:para>
-				</maml:description>
-				<command:parameterValue required="true" variableLength="false">String</command:parameterValue>
-				<dev:type>
-					<maml:name>String</maml:name>
-					<maml:uri/>
-				</dev:type>
-				<dev:defaultValue/>
-			</command:parameter>
-			<command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="named" aliases="cred">
-				<maml:name>Credential</maml:name>
-				<maml:description>
-					<maml:para>The PSCredential object that contains the user name and password required to connect to the SharePoint site.</maml:para>
-				</maml:description>
-				<command:parameterValue required="true" variableLength="false">PSCredential</command:parameterValue>
-				<dev:type>
-					<maml:name>PSCredential</maml:name>
-					<maml:uri/>
-				</dev:type>
-				<dev:defaultValue/>
-			</command:parameter>
-			<command:parameter required="true" variableLength="false" globbing="false" pipelineInput="false" position="named" aliases="IsSPO">
-				<maml:name>IsSharePointOnlineSite</maml:name>
-				<maml:description>
-					<maml:para>Specify if the site is a SharePoint Online site</maml:para>
-				</maml:description>
-				<command:parameterValue required="true" variableLength="false">Boolean</command:parameterValue>
-				<dev:type>
-					<maml:name>Boolean</maml:name>
-					<maml:uri/>
-				</dev:type>
-				<dev:defaultValue/>
-			</command:parameter>
-		</command:parameters>
-		<command:inputTypes>
-			<!-- Inputs-->
-			<command:inputType>
-				<dev:type>
-					<maml:name>None
-					</maml:name>
-					<maml:uri/>
-				</dev:type>
-				<maml:description>
-					<maml:para/>
-				</maml:description>
-			</command:inputType>
-		</command:inputTypes>
-		<command:returnValues>
-			<!-- Outputs-->
-			<command:returnValue>
-				<dev:type>
-					<maml:name>System.Array</maml:name>
-					<maml:uri>
-					</maml:uri>
-				</dev:type>
-				<maml:description>
-					<maml:para>
-					</maml:para>
-				</maml:description>
-			</command:returnValue>
-		</command:returnValues>
-		<command:examples>
-			<!-- Examples-->
-			<command:example>
-				<maml:title>-------------------------- EXAMPLE 1 --------------------------</maml:title>
-				<maml:introduction>
-					<maml:para>PS C:\&gt;</maml:para>
-				</maml:introduction>
-				<dev:code>$URLs = Get-SPListItemAttachmentUrl -SPConnection $SPConnection -ListName &quot;Test List&quot; -ListItemID 1</dev:code>
-				<dev:remarks>
-					<maml:para>Get URLs of all attachment from List Item with Id 1 on the &apos;Test List&apos; using an Azure Automation / SMA connection object.</maml:para>
-				</dev:remarks>
-			</command:example>
-			<command:example>
-				<maml:title>-------------------------- EXAMPLE 2 --------------------------</maml:title>
-				<maml:introduction>
-					<maml:para>PS C:\&gt;</maml:para>
-				</maml:introduction>
-				<dev:code>$Username = &quot;you@yourcompany.com&quot;
-$SecurePassword = ConvertTo-SecureString &quot;password1234&quot; -AsPlainText -Force
-$MyPSCred = New-Object System.Management.Automation.PSCredential ($Username, $SecurePassword)
-$URLs = Get-SPListItemAttachmentUrl -SiteUrl &quot;https://yourcompany.sharepoint.com&quot; -Credential $MyPSCred -IsSPO $true -ListName &quot;Test List&quot; -ListItemID 1</dev:code>
-				<dev:remarks>
-					<maml:para>Get URLs of all attachment from List Item with Id 1 on the &apos;Test List&apos; by connecting to SharePoint site using individual parameters.</maml:para>
 				</dev:remarks>
 			</command:example>
 		</command:examples>

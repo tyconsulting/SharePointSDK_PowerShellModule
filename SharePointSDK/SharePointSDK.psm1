@@ -533,94 +533,6 @@ Function Get-SPListItemAttachments
 }
 
 # .EXTERNALHELP SharePointSDK.psm1-Help.xml
-Function Get-SPListItemAttachmentUrl
-{
-  [OutputType('System.array')]
-  [CmdletBinding()]
-  Param(
-    [Parameter(ParameterSetName = 'SMAConnection',Mandatory = $true,HelpMessage = 'Please specify the SMA / Azure Autoamtion Connection object')][Object]$SPConnection,
-    [Parameter(ParameterSetName = 'IndividualParameter',Mandatory = $true,HelpMessage = 'Please specify the request URL')][String]$SiteUrl,
-    [Parameter(Mandatory = $true,HelpMessage = 'Please specify the name of the list')][String]$ListName,
-    [Parameter(ParameterSetName = 'IndividualParameter',Mandatory = $true,HelpMessage = 'Please specify the user credential to connect to the SharePoint or SharePoint Online site')][Alias('cred')]
-    [System.Management.Automation.PSCredential]
-    [System.Management.Automation.CredentialAttribute()]
-    $Credential,
-    [Parameter(ParameterSetName = 'IndividualParameter',Mandatory = $true,HelpMessage = 'Please specify if the site is a SharePoint Online site')][Alias('IsSPO')][boolean]$IsSharePointOnlineSite,
-    [Parameter(Mandatory = $true,HelpMessage = 'Please specify the ID of the list item')][int]$ListItemId
-  )
-
-  If($SPConnection)
-  {
-    $SPcredential = New-SPCredential -SPConnection $SPConnection
-    $SiteUrl = $SPConnection.SharePointSiteURL
-    $ServerVersion = Get-SPServerVersion -SPConnection  $SPConnection
-  }
-  else 
-  {
-    $SPcredential = New-SPCredential -Credential $Credential -IsSharePointOnlineSite $IsSharePointOnlineSite
-    $ServerVersion = Get-SPServerVersion -SiteUrl $SiteUrl -Credential $Credential -IsSharePointOnlineSite $IsSharePointOnlineSite
-  }
-
-  #Check SharePoint server version
-  If ($ServerVersion.Major -lt 15)
-  {
-    #Version below SharePoint 2013 (Major version 15)
-    Write-Error -Message "Get-SPListItemAttachmentUrl DOES NOT work on pre SharePoint 2013 versions. Current Version: $ServerVersion"
-    Return
-  }
-
-  #Bind to site collection
-  $Context = New-Object -TypeName Microsoft.SharePoint.Client.ClientContext -ArgumentList ($SiteUrl)
-  $Context.Credentials = $SPcredential
-
-  #Retrieve list
-  $List = $Context.Web.Lists.GetByTitle($ListName)
-  $Context.Load($List)
-  $Context.ExecuteQuery()
-  
-  #Retrieve site
-  $Site = $Context.Site
-  $Context.Load($Site)
-  $Context.ExecuteQuery()
-  $SiteRootUrl = $Site.Url
-  
-  #Retrieve the list item
-  Try 
-  {
-    $ListItem = $List.GetItemById($ListItemId)
-    $Context.Load($ListItem)
-    $Context.ExecuteQuery()
-    $bItemFound = $true
-  }
-  Catch 
-  {
-    Write-Error -Message "Unable to find list item with ID $ListItemId from the list $ListName."
-    $bItemFound = $false
-  }
-
-  #Get attachments
-  $arrAttachmentUrls = @()
-  if ($bItemFound)
-  {
-    #Get Attached Files
-    Write-Verbose -Message 'Getting attachments for the list item'
-    $AttachmentFiles = $ListItem.AttachmentFiles
-    $Context.Load($AttachmentFiles)
-    $Context.ExecuteQuery()
-    $FileCount = $AttachmentFiles.count
-    Write-Verbose -Message "Number of attachments found: $FileCount"
-    Foreach ($attachment in $AttachmentFiles)
-    {
-      Write-Verbose -Message "Getting the Absolute URL for $($attachment.FileName)"
-      $AttachmentRelativeUrl = $attachment.ServerRelativeUrl
-      $AttachmentAbsoluteUrl = [String]::Format('{0}{1}', $SiteRootUrl, $AttachmentRelativeUrl)
-      $arrAttachmentUrls += $AttachmentAbsoluteUrl
-    }
-  }
-  ,$arrAttachmentUrls
-}
-
-# .EXTERNALHELP SharePointSDK.psm1-Help.xml
 Function Add-SPListItemAttachment
 {
   [OutputType('System.Boolean')]
@@ -2354,9 +2266,11 @@ Function New-SPListDateTimeField
   #Default value
   If ($UseTodayAsDefaultValue -eq $true)
   {
-    $fieldXML = "$fieldXML><Default>[today]</Default>"
+    $fieldXML = "$fieldXML><Default>[today]</Default></Field>"
+  } else {
+    $fieldXML = "$fieldXML />"
   }
-  $fieldXML = "$fieldXML </Field>"
+  
   Write-Verbose -Message "Field XML: `"$fieldXML`""
   Write-Verbose -Message 'Adding the Field to the list'
     
