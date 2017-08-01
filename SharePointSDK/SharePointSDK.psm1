@@ -12,7 +12,7 @@ Function New-SPCredential
     $Credential,
     [Parameter(ParameterSetName = 'IndividualParameter',Mandatory = $true,HelpMessage = 'Please specify if the site is a SharePoint Online site')][Alias('IsSPO')][boolean]$IsSharePointOnlineSite
   )
-
+	
   If ($SPConnection)
   {
     $Username = $SPConnection.Username
@@ -172,7 +172,7 @@ Function Add-SPListItem
   }
   Catch 
   {
-    throw $_.Exception.InnerException
+    throw "Unable to add list item to the list $ListName`: " + "`n" + $ListFieldsValues
     $bCreated = $false
   }
   If ($bCreated)
@@ -407,7 +407,7 @@ Function Update-SPListItem
   }
   Catch 
   {
-    throw $_.Exception.InnerException
+    throw "Unable to find list item with ID $ListItemId from the list $ListName."
     $bItemFound = $false
   }
 
@@ -426,7 +426,7 @@ Function Update-SPListItem
     }
     Catch 
     {
-      throw $_.Exception.InnerException
+      throw "Unable to add list item to the list $ListName`: " + "`n" + $ListFieldsValues
       $bUpdated = $false
     }
   }
@@ -668,8 +668,7 @@ Function Add-SPListItemAttachment
     }
     Catch 
     {
-      throw $_.Exception.InnerException
-      #Write-Error -Message "Failed to upload $FilePath to the list Item (ID: $ListItemId)."
+      Write-Error -Message "Failed to uploade $FilePath to the list Item (ID: $ListItemId)."
       $bUploaded = $false
     }
   }
@@ -829,7 +828,7 @@ Function New-SPList
   Write-Verbose -Message "Creating 'Microsoft.SharePoint.Client.ListCreationInformation' object for list `'$ListTitle`'."
   $CreationInfo = New-Object -TypeName Microsoft.SharePoint.Client.ListCreationInformation
   $CreationInfo.Title = $ListTitle
-  if ($ListDescription)
+  if ($ListDescription.Length -gt 0)
   {
     Write-Verbose -Message "List Description: '$ListDescription'."
     $CreationInfo.Description = $ListDescription
@@ -915,12 +914,12 @@ Function Remove-SPList
     
   #Get the list
   Write-Verbose -Message 'Getting the SharePoint list.'
-  If ($ListTitle)
+  If ($PSBoundParameters.ContainsKey('ListTitle'))
   {
     Write-Verbose -Message "List Title specified: '$ListTitle'."
     $List = $web.Lists.GetByTitle($ListTitle)
   }
-  elseif ($ListId) 
+  elseif ($PSBoundParameters.ContainsKey('ListId')) 
   {
     Write-Verbose -Message "List Id specified: '$($ListId.ToString())'."
     $List = $web.Lists.GetById($ListId)
@@ -996,12 +995,12 @@ Function Get-SPList
     
   #Get the list
   Write-Verbose -Message 'Getting the SharePoint list.'
-  If ($ListTitle)
+  If ($PSBoundParameters.ContainsKey('ListTitle'))
   {
     Write-Verbose -Message "List Title specified: '$ListTitle'."
     $List = $web.Lists.GetByTitle($ListTitle)
   }
-  elseif ($ListId) 
+  elseif ($PSBoundParameters.ContainsKey('ListId')) 
   {
     Write-Verbose -Message "List Id specified: '$($ListId.ToString())'."
     $List = $web.Lists.GetById($ListId)
@@ -1077,9 +1076,6 @@ Function New-SPListLookupField
     [Parameter(Mandatory = $true,HelpMessage = 'Please specify the field to be displayed')]
     [ValidateNotNullOrEmpty()][String]$ShowField,
 
-    [Parameter(Mandatory = $false,HelpMessage = 'Please specify if the field allows multiple values')]
-    [ValidateNotNullOrEmpty()][Boolean]$AllowMultipleValues = $false,
-
     [Parameter(Mandatory = $false,HelpMessage = 'Please specify the additional fields from the source list to be added')]
     [ValidateNotNullOrEmpty()][String[]]$AdditionalSourceFields,
 
@@ -1112,12 +1108,12 @@ Function New-SPListLookupField
     
   #Get the list
   Write-Verbose -Message 'Getting the SharePoint list.'
-  If ($ListTitle)
+  If ($PSBoundParameters.ContainsKey('ListTitle'))
   {
     Write-Verbose -Message "List Title specified: '$ListTitle'."
     $List = $web.Lists.GetByTitle($ListTitle)
   }
-  elseif ($ListId) 
+  elseif ($PSBoundParameters.ContainsKey('ListId')) 
   {
     Write-Verbose -Message "List Id specified: '$($ListId.ToString())'."
     $List = $web.Lists.GetById($ListId)
@@ -1153,14 +1149,8 @@ Function New-SPListLookupField
   }
   Write-Verbose -Message "List Id: '$strListId'."
   $LookupFieldGUID = [System.Guid]::NewGuid().ToString()
-  If ($AllowMultipleValues -eq $false)
-  {
-    $fieldXML = "<Field Type='Lookup' ID='{$LookupFieldGUID}' DisplayName='$FieldDisplayName' List='{$SourceListId}' ShowField='$ShowField' RelationshipDeleteBehavior='$RelationshipDeleteBehavior' Name='$FieldName' StaticName='$FieldName' Description='$FieldDescription' Required='$($Required.ToString().ToUpper())' EnforceUniqueValues='$($EnforceUniqueValues.ToString().ToUpper())' Indexed='$($bIndexed.ToString().ToUpper())'/>"
-  }
-  else 
-  {
-    $fieldXML = "<Field Type='LookupMulti' ID='{$LookupFieldGUID}' DisplayName='$FieldDisplayName' List='{$SourceListId}' ShowField='$ShowField' RelationshipDeleteBehavior='$RelationshipDeleteBehavior' Name='$FieldName' StaticName='$FieldName' Description='$FieldDescription' Required='$($Required.ToString().ToUpper())' EnforceUniqueValues='FALSE' Indexed='$($bIndexed.ToString().ToUpper())' Mult='TRUE' Sortable='FALSE' Group=''/>"
-  }
+  $fieldXML = "<Field Type='Lookup' ID='{$LookupFieldGUID}' DisplayName='$FieldDisplayName' List='{$SourceListId}' ShowField='$ShowField' RelationshipDeleteBehavior='$RelationshipDeleteBehavior' Name='$FieldName' StaticName='$FieldName' Description='$FieldDescription' Required='$($Required.ToString().ToUpper())' EnforceUniqueValues='$($EnforceUniqueValues.ToString().ToUpper())' Indexed='$($bIndexed.ToString().ToUpper())'/>"
+    
   Write-Verbose -Message "Field XML: `"$fieldXML`""
   Write-Verbose -Message 'Adding the Field to the list'
     
@@ -1211,16 +1201,9 @@ Function New-SPListLookupField
         Write-Verbose -Message "Source Field Static Name: '$SourceFieldStaticName'."
         $AdditionalFieldGUID = [System.Guid]::NewGuid().ToString()
         $AdditionalFieldName = "$FieldDisplayName`_$SourceFieldStaticName"
-        If ($AllowMultipleValues)
-        {
-          $AdditionalFieldXML = "<Field Type='LookupMulti' DisplayName='$FieldDisplayName`:$AdditionalFieldDisplayName' List='{$SourceListId}' WebId='$WebId' ShowField='$SourceFieldInternalName' FieldRef='$LookupFieldGUID' ReadOnly='TRUE' UnlimitedLengthInDocumentLibrary='FALSE' ID='{$AdditionalFieldGUID}' SourceID='{$($List.Id.ToString())}' StaticName='$AdditionalFieldName' Name='$AdditionalFieldName' Group='Custom Columns' Mult='TRUE' Sortable='FALSE'/>"
-        }
-        else 
-        {
-          $AdditionalFieldXML = "<Field Type='Lookup' DisplayName='$FieldDisplayName`:$AdditionalFieldDisplayName' List='{$SourceListId}' WebId='$WebId' ShowField='$SourceFieldInternalName' FieldRef='$LookupFieldGUID' ReadOnly='TRUE' UnlimitedLengthInDocumentLibrary='FALSE' ID='{$AdditionalFieldGUID}' SourceID='{$($List.Id.ToString())}' StaticName='$AdditionalFieldName' Name='$AdditionalFieldName'/>"
-          #$AdditionalFieldXML = "<Field Type='Lookup' DisplayName='$FieldDisplayName`:$AdditionalFieldDisplayName' List='{$SourceListId}' WebId='$WebId' ShowField='$SourceFieldInternalName' FieldRef='$LookupFieldGUID' ReadOnly='TRUE' UnlimitedLengthInDocumentLibrary='FALSE' ID='{$AdditionalFieldGUID}' SourceID='{$($List.Id.ToString())}' StaticName='$AdditionalFieldName' Name='$AdditionalFieldName' Version='$SourceFieldVersion'/>"
-        }
-
+        $AdditionalFieldXML = "<Field Type='Lookup' DisplayName='$FieldDisplayName`:$AdditionalFieldDisplayName' List='{$SourceListId}' WebId='$WebId' ShowField='$SourceFieldInternalName' FieldRef='$LookupFieldGUID' ReadOnly='TRUE' UnlimitedLengthInDocumentLibrary='FALSE' ID='{$AdditionalFieldGUID}' SourceID='{$($List.Id.ToString())}' StaticName='$AdditionalFieldName' Name='$AdditionalFieldName'/>"
+        #$AdditionalFieldXML = "<Field Type='Lookup' DisplayName='$FieldDisplayName`:$AdditionalFieldDisplayName' List='{$SourceListId}' WebId='$WebId' ShowField='$SourceFieldInternalName' FieldRef='$LookupFieldGUID' ReadOnly='TRUE' UnlimitedLengthInDocumentLibrary='FALSE' ID='{$AdditionalFieldGUID}' SourceID='{$($List.Id.ToString())}' StaticName='$AdditionalFieldName' Name='$AdditionalFieldName' Version='$SourceFieldVersion'/>"
+                
         Write-Verbose -Message "Additional field XML: '$AdditionalFieldXML'"
         if ($AddToDefaultView)
         {
@@ -1326,12 +1309,12 @@ Function New-SPListCheckboxField
     
   #Get the list
   Write-Verbose -Message 'Getting the SharePoint list.'
-  If ($ListTitle)
+  If ($PSBoundParameters.ContainsKey('ListTitle'))
   {
     Write-Verbose -Message "List Title specified: '$ListTitle'."
     $List = $web.Lists.GetByTitle($ListTitle)
   }
-  elseif ($ListId) 
+  elseif ($PSBoundParameters.ContainsKey('ListId')) 
   {
     Write-Verbose -Message "List Id specified: '$($ListId.ToString())'."
     $List = $web.Lists.GetById($ListId)
@@ -1480,12 +1463,12 @@ Function New-SPListSingleLineTextField
     
   #Get the list
   Write-Verbose -Message 'Getting the SharePoint list.'
-  If ($ListTitle)
+  If ($PSBoundParameters.ContainsKey('ListTitle'))
   {
     Write-Verbose -Message "List Title specified: '$ListTitle'."
     $List = $web.Lists.GetByTitle($ListTitle)
   }
-  elseif ($ListId) 
+  elseif ($PSBoundParameters.ContainsKey('ListId')) 
   {
     Write-Verbose -Message "List Id specified: '$($ListId.ToString())'."
     $List = $web.Lists.GetById($ListId)
@@ -1652,12 +1635,12 @@ Function New-SPListMultiLineTextField
     
   #Get the list
   Write-Verbose -Message 'Getting the SharePoint list.'
-  If ($ListTitle)
+  If ($PSBoundParameters.ContainsKey('ListTitle'))
   {
     Write-Verbose -Message "List Title specified: '$ListTitle'."
     $List = $web.Lists.GetByTitle($ListTitle)
   }
-  elseif ($ListId) 
+  elseif ($PSBoundParameters.ContainsKey('ListId')) 
   {
     Write-Verbose -Message "List Id specified: '$($ListId.ToString())'."
     $List = $web.Lists.GetById($ListId)
@@ -1826,12 +1809,12 @@ Function New-SPListNumberField
     
   #Get the list
   Write-Verbose -Message 'Getting the SharePoint list.'
-  If ($ListTitle)
+  If ($PSBoundParameters.ContainsKey('ListTitle'))
   {
     Write-Verbose -Message "List Title specified: '$ListTitle'."
     $List = $web.Lists.GetByTitle($ListTitle)
   }
-  elseif ($ListId) 
+  elseif ($PSBoundParameters.ContainsKey('ListId')) 
   {
     Write-Verbose -Message "List Id specified: '$($ListId.ToString())'."
     $List = $web.Lists.GetById($ListId)
@@ -1859,15 +1842,18 @@ Function New-SPListNumberField
   Write-Verbose -Message "List Id: '$strListId'."
   #construct the field XML
   $fieldXML = "<Field Type='Number' DisplayName='$FieldDisplayName' Name='$FieldName' StaticName='$FieldName' Description='$FieldDescription' Required='$($Required.ToString().ToUpper())' EnforceUniqueValues='$($EnforceUniqueValues.ToString().ToUpper())' Indexed='$($bIndexed.ToString().ToUpper())'"
-  if ($Minimum)
+  if ($PSBoundParameters.ContainsKey('Minimum'))
+  #if ($Minimum)
   {
     $fieldXML = "$fieldXML Min='$Minimum'"
   }
-  if ($Maximum)
+  if ($PSBoundParameters.ContainsKey('Maximum'))
+  #if ($Maximum)
   {
     $fieldXML = "$fieldXML Max='$Maximum'"
   }
-  if ($DecimalPlaces)
+  if ($PSBoundParameters.ContainsKey('DecimalPlaces'))
+  #if ($DecimalPlaces)
   {
     $fieldXML = "$fieldXML Decimals='$DecimalPlaces'"
   }
@@ -1875,7 +1861,8 @@ Function New-SPListNumberField
   {
     $fieldXML = "$fieldXML Percentage='TRUE'"
   }
-  if ($DefaultValue)
+  if ($PSBoundParameters.ContainsKey('DefaultValue'))
+  #if ($DefaultValue)
   {
     $fieldXML = "$fieldXML><Default>$DefaultValue</Default></Field>"
   }
@@ -1974,7 +1961,7 @@ Function New-SPListChoiceField
     [Parameter(Mandatory = $true,HelpMessage = 'Please specify the minimum value of this Field')]
     [ValidateSet('DropDown', 'RadioButtons', 'CheckBoxes')][String]$Style,
 
-    [Parameter(Mandatory = $false,HelpMessage = 'Please specify an array containing a list of choices')]
+    [Parameter(Mandatory = $true,HelpMessage = 'Please specify an array containing a list of choices')]
     [ValidateNotNullOrEmpty()][String[]]$Choices,
 
     [Parameter(Mandatory = $false,HelpMessage = 'Please specify if this Field should be added to the default view')]
@@ -2015,12 +2002,12 @@ Function New-SPListChoiceField
     
   #Get the list
   Write-Verbose -Message 'Getting the SharePoint list.'
-  If ($ListTitle)
+  If ($PSBoundParameters.ContainsKey('ListTitle'))
   {
     Write-Verbose -Message "List Title specified: '$ListTitle'."
     $List = $web.Lists.GetByTitle($ListTitle)
   }
-  elseif ($ListId) 
+  elseif ($PSBoundParameters.ContainsKey('ListId')) 
   {
     Write-Verbose -Message "List Id specified: '$($ListId.ToString())'."
     $List = $web.Lists.GetById($ListId)
@@ -2213,7 +2200,7 @@ Function New-SPListDateTimeField
     
   #Get the list
   Write-Verbose -Message 'Getting the SharePoint list.'
-  If ($ListTitle)
+  If ($PSBoundParameters.ContainsKey('ListTitle'))
   {
     Write-Verbose -Message "List Title specified: '$ListTitle'."
     $List = $web.Lists.GetByTitle($ListTitle)
@@ -2221,7 +2208,7 @@ Function New-SPListDateTimeField
   elseif ($ListId) 
   {
     Write-Verbose -Message "List Id specified: '$($ListId.ToString())'."
-    $List = $web.Lists.GetById($ListId)
+    $List = $web.Lists.GetById($PSBoundParameters.ContainsKey('ListId'))
   }
   else 
   {
@@ -2267,10 +2254,11 @@ Function New-SPListDateTimeField
   If ($UseTodayAsDefaultValue -eq $true)
   {
     $fieldXML = "$fieldXML><Default>[today]</Default></Field>"
-  } else {
+  }
+  else 
+  {
     $fieldXML = "$fieldXML />"
   }
-  
   Write-Verbose -Message "Field XML: `"$fieldXML`""
   Write-Verbose -Message 'Adding the Field to the list'
     
@@ -2389,12 +2377,12 @@ Function New-SPListHyperLinkField
     
   #Get the list
   Write-Verbose -Message 'Getting the SharePoint list.'
-  If ($ListTitle)
+  If ($PSBoundParameters.ContainsKey('ListTitle'))
   {
     Write-Verbose -Message "List Title specified: '$ListTitle'."
     $List = $web.Lists.GetByTitle($ListTitle)
   }
-  elseif ($ListId) 
+  elseif ($PSBoundParameters.ContainsKey('ListId')) 
   {
     Write-Verbose -Message "List Id specified: '$($ListId.ToString())'."
     $List = $web.Lists.GetById($ListId)
@@ -2559,12 +2547,12 @@ Function New-SPListPersonField
     
   #Get the list
   Write-Verbose -Message 'Getting the SharePoint list.'
-  If ($ListTitle)
+  If ($PSBoundParameters.ContainsKey('ListTitle'))
   {
     Write-Verbose -Message "List Title specified: '$ListTitle'."
     $List = $web.Lists.GetByTitle($ListTitle)
   }
-  elseif ($ListId) 
+  elseif ($PSBoundParameters.ContainsKey('ListId')) 
   {
     Write-Verbose -Message "List Id specified: '$($ListId.ToString())'."
     $List = $web.Lists.GetById($ListId)
@@ -2706,12 +2694,12 @@ Function Remove-SPListField
     
   #Get the list
   Write-Verbose -Message 'Getting the SharePoint list.'
-  If ($ListTitle)
+  If ($PSBoundParameters.ContainsKey('ListTitle'))
   {
     Write-Verbose -Message "List Title specified: '$ListTitle'."
     $List = $web.Lists.GetByTitle($ListTitle)
   }
-  elseif ($ListId) 
+  elseif ($PSBoundParameters.ContainsKey('ListId')) 
   {
     Write-Verbose -Message "List Id specified: '$($ListId.ToString())'."
     $List = $web.Lists.GetById($ListId)
@@ -2795,12 +2783,12 @@ Function Update-SPListField
     
   #Get the list
   Write-Verbose -Message 'Getting the SharePoint list.'
-  If ($ListTitle)
+  If ($PSBoundParameters.ContainsKey('ListTitle'))
   {
     Write-Verbose -Message "List Title specified: '$ListTitle'."
     $List = $web.Lists.GetByTitle($ListTitle)
   }
-  elseif ($ListId) 
+  elseif ($PSBoundParameters.ContainsKey('ListId')) 
   {
     Write-Verbose -Message "List Id specified: '$($ListId.ToString())'."
     $List = $web.Lists.GetById($ListId)
@@ -2872,7 +2860,7 @@ Function Set-SPListFieldVisibility
     [Parameter(ParameterSetName = 'IndividualByTitle',Mandatory = $true,HelpMessage = 'Please specify the title of the list')]
     [ValidateNotNullOrEmpty()][String]$ListTitle,
 
-    [Parameter(ParameterSetName = 'SMAById',Mandatory = $true,HelpMessage = 'Please specify the Id of the list.')]
+    [Parameter(ParameterSetName = 'SMAById',Mandatory = $true,HelpMessage = 'Please specify the Id of the list')]
     [Parameter(ParameterSetName = 'IndividualById',Mandatory = $true,HelpMessage = 'Please specify the Id of the list')]
     [ValidateNotNullOrEmpty()][Guid]$ListId,
 
@@ -2914,12 +2902,12 @@ Function Set-SPListFieldVisibility
     
   #Get the list
   Write-Verbose -Message 'Getting the SharePoint list.'
-  If ($ListTitle)
+  If ($PSBoundParameters.ContainsKey('ListTitle'))
   {
     Write-Verbose -Message "List Title specified: '$ListTitle'."
     $List = $web.Lists.GetByTitle($ListTitle)
   }
-  elseif ($ListId) 
+  elseif ($PSBoundParameters.ContainsKey('ListId')) 
   {
     Write-Verbose -Message "List Id specified: '$($ListId.ToString())'."
     $List = $web.Lists.GetById($ListId)
@@ -2976,6 +2964,106 @@ Function Set-SPListFieldVisibility
   {
     throw $_.Exception.InnerException
     $false
+  }
+}
+
+# .EXTERNALHELP SharePointSDK.psm1-Help.xml
+Function New-SPUser
+{
+  [OutputType('System.Boolean')]
+  [CmdletBinding()]
+  Param(
+    [Parameter(ParameterSetName = 'SMAConnection',Mandatory = $true,HelpMessage = 'Please specify the SMA / Azure Autoamtion connection object')]
+    [Object]$SPConnection,
+
+    [Parameter(ParameterSetName = 'IndividualParameters',Mandatory = $true,HelpMessage = 'Please specify the SharePoint Site URL')]
+    [String]$SiteUrl,
+
+    [Parameter(ParameterSetName = 'IndividualParameters',Mandatory = $true,HelpMessage = 'Please specify the user credential to connect to the SharePoint or SharePoint Online site')]
+    [Alias('cred')]
+    [System.Management.Automation.PSCredential]
+    [System.Management.Automation.CredentialAttribute()]
+    $Credential,
+
+    [Parameter(ParameterSetName = 'IndividualParameters',Mandatory = $true,HelpMessage = 'Please specify if the site is a SharePoint Online site')]
+    [Alias('IsSPO')][boolean]$IsSharePointOnlineSite,
+
+    [Parameter(Mandatory = $false,HelpMessage = 'Please specify the user email')]
+    [ValidateNotNullOrEmpty()][String]$Email,
+
+    [Parameter(Mandatory = $true,HelpMessage = 'Please specify the user login name')]
+    [ValidateNotNullOrEmpty()][String]$LoginName,
+
+    [Parameter(Mandatory = $true,HelpMessage = 'Please specify the user title')]
+    [ValidateNotNullOrEmpty()][String]$Title,
+
+    [Parameter(Mandatory = $false,HelpMessage = 'Please specify if the user should be granted Site Visitors rights.')]
+    [ValidateNotNullOrEmpty()][Boolean]$IsSiteVisitor = $true,
+
+    [Parameter(Mandatory = $false,HelpMessage = 'Please specify if the user should be granted Site Members rights.')]
+    [ValidateNotNullOrEmpty()][Boolean]$IsSiteMember = $false,
+
+    [Parameter(Mandatory = $false,HelpMessage = 'Please specify if the user should be granted Site Owners rights.')]
+    [ValidateNotNullOrEmpty()][Boolean]$IsSiteOwner = $false
+  )
+  If($SPConnection)
+  {
+    $SPcredential = New-SPCredential -SPConnection $SPConnection
+    $SiteUrl = $SPConnection.SharePointSiteURL
+  } else 
+  {
+    $SPcredential = New-SPCredential -Credential $Credential -IsSharePointOnlineSite $IsSharePointOnlineSite
+  }
+
+  #Bind to site collection
+  Write-Verbose -Message 'Bind to site collection'
+  $Context = New-Object -TypeName Microsoft.SharePoint.Client.ClientContext -ArgumentList ($SiteUrl)
+  $Context.Credentials = $SPcredential
+  $web = $Context.Web
+
+  #Determine the default group membership
+  If ($IsSiteOwner)
+  {
+    $GroupId = 6
+  }
+  elseif ($IsSiteMember)
+  {
+    $GroupId = 8
+  }
+  elseif ($IsSiteVisitor)
+  {
+    $GroupId = 7
+  }
+  else 
+  {
+    $GroupId = $NULL
+  }
+  #start creating the user
+  Write-Verbose -Message 'Start creating the SharePoint user.'
+  try
+  {
+    $UserCreationInfo = New-Object -TypeName Microsoft.SharePoint.Client.UserCreationInformation
+    $UserCreationInfo.Title = $Title
+    $UserCreationInfo.Email = $Email
+    $UserCreationInfo.LoginName = $LoginName
+    IF ($GroupId -ne $NULL)
+    {
+      $Group = $Context.web.SiteGroups.GetById($GroupId)
+      $Context.Load($Group)
+      $Context.ExecuteQuery()
+      $User = $Group.Users.Add($UserCreationInfo)
+    }
+    else 
+    {
+      $User = $web.SiteUsers.Add($UserCreationInfo)
+    }
+    $Context.ExecuteQuery()
+    return $true
+  }
+  catch 
+  {
+    Throw $_.Exception.InnerException
+    return $false
   }
 }
 
@@ -3050,7 +3138,7 @@ Function Get-SPGroup
     $Groups = $web.SiteGroups
     $Context.Load($Groups)
     $Context.ExecuteQuery()
-    If ($GroupTitle)
+    If ($PSBoundParameters.ContainsKey('GroupTitle'))
     {
       Write-Verbose -Message "Group Title specified: '$GroupTitle'."
       $Group = $Groups.GetByName($GroupTitle)
@@ -3060,7 +3148,7 @@ Function Get-SPGroup
       $Context.ExecuteQuery()
       $Result = $Group
     }
-    elseif ($GroupId) 
+    elseif ($PSBoundParameters.ContainsKey('GroupId')) 
     {
       Write-Verbose -Message "Group Id specified: '$GroupId'."
       $Group = $Groups.GetById($GroupId)
@@ -3264,12 +3352,12 @@ Function New-SPGroupMember
     $Groups = $web.SiteGroups
     $Context.Load($Groups)
     $Context.ExecuteQuery()
-    If ($GroupTitle)
+    If ($PSBoundParameters.ContainsKey('GroupTitle'))
     {
       Write-Verbose -Message "Group Title specified: '$GroupTitle'."
       $Group = $Groups.GetByName($GroupTitle)
     }
-    elseif ($GroupId) 
+    elseif ($PSBoundParameters.ContainsKey('GroupId')) 
     {
       Write-Verbose -Message "Group Id specified: '$GroupId'."
       $Group = $Groups.GetById($GroupId)
@@ -3365,12 +3453,12 @@ Function Remove-SPGroupMember
     $Groups = $web.SiteGroups
     $Context.Load($Groups)
     $Context.ExecuteQuery()
-    If ($GroupTitle)
+    If ($PSBoundParameters.ContainsKey('GroupTitle'))
     {
       Write-Verbose -Message "Group Title specified: '$GroupTitle'."
       $Group = $Groups.GetByName($GroupTitle)
     }
-    elseif ($GroupId) 
+    elseif ($PSBoundParameters.ContainsKey('GroupId')) 
     {
       Write-Verbose -Message "Group Id specified: '$GroupId'."
       $Group = $Groups.GetById($GroupId)
@@ -3528,7 +3616,7 @@ Function Get-SPSiteTemplate
     Return
   }
   #Get the specific template if the template title or name is specified
-  If ($TemplateTitle)
+  If ($PSBoundParameters.ContainsKey('TemplateTitle'))
   {
     Write-Verbose -Message "Getting site template with title '$TemplateTitle'."
     $SpecifiedTemplate = $AvailableTemplates | Where-Object -FilterScript {
@@ -3544,7 +3632,7 @@ Function Get-SPSiteTemplate
       Return $SpecifiedTemplate
     }
   }
-  elseif ($TemplateName) 
+  elseif ($PSBoundParameters.ContainsKey('TemplateName')) 
   {
     Write-Verbose -Message "Getting site template with name '$TemplateName'."
     $SpecifiedTemplate = $AvailableTemplates | Where-Object -FilterScript {
@@ -3638,7 +3726,7 @@ Function New-SPSubSite
   $CreationInfo = New-Object -TypeName Microsoft.SharePoint.Client.WebCreationInformation
   $CreationInfo.Url = $NewSiteUrlLeaf
   $CreationInfo.Title = $NewSiteTitle
-  if ($NewSiteDescription)
+  if ($NewSiteDescription.length -gt 0)
   {
     Write-Verbose -Message "New site Description: '$NewSiteDescription'."
     $CreationInfo.Description = $NewSiteDescription
@@ -3647,7 +3735,7 @@ Function New-SPSubSite
   try
   {
     #Create the site
-    Write-Verbose -Message "Creating subsite '$NewSiteTitle'."
+    Write-Verbose -Message "Creating list '$ListTitle'."
     $NewSite = $web.webs.Add($CreationInfo)
     $Context.Load($NewSite)
     $Context.ExecuteQuery()
@@ -3835,12 +3923,12 @@ Function Add-SPListFieldToDefaultView
     
   #Get the list
   Write-Verbose -Message 'Getting the SharePoint list.'
-  If ($ListTitle)
+  If ($PSBoundParameters.ContainsKey('ListTitle'))
   {
     Write-Verbose -Message "List Title specified: '$ListTitle'."
     $List = $web.Lists.GetByTitle($ListTitle)
   }
-  elseif ($ListId) 
+  elseif ($PSBoundParameters.ContainsKey('ListId')) 
   {
     Write-Verbose -Message "List Id specified: '$($ListId.ToString())'."
     $List = $web.Lists.GetById($ListId)
@@ -3925,12 +4013,12 @@ Function Remove-SPListFieldFromDefaultView
     
   #Get the list
   Write-Verbose -Message 'Getting the SharePoint list.'
-  If ($ListTitle)
+  If ($PSBoundParameters.ContainsKey('ListTitle'))
   {
     Write-Verbose -Message "List Title specified: '$ListTitle'."
     $List = $web.Lists.GetByTitle($ListTitle)
   }
-  elseif ($ListId) 
+  elseif ($PSBoundParameters.ContainsKey('ListId')) 
   {
     Write-Verbose -Message "List Id specified: '$($ListId.ToString())'."
     $List = $web.Lists.GetById($ListId)
